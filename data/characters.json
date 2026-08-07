@@ -1,0 +1,38 @@
+[
+  {
+    "id": "kenji",
+    "name": "Kenji",
+    "class": "Fighter",
+    "level": 1,
+    "hp": 14,
+    "max_hp": 14,
+    "ac": 16
+  },
+  {
+    "id": "mira",
+    "name": "Mira",
+    "class": "Ranger",
+    "level": 1,
+    "hp": 16,
+    "max_hp": 16,
+    "ac": 13
+  },
+  {
+    "id": "branik",
+    "name": "Branik",
+    "class": "Fighter",
+    "level": 1,
+    "hp": 11,
+    "max_hp": 11,
+    "ac": 16
+  },
+  {
+    "id": "elowen",
+    "name": "Elowen",
+    "class": "Wizard",
+    "level": 1,
+    "hp": 9,
+    "max_hp": 9,
+    "ac": 10
+  }
+]
