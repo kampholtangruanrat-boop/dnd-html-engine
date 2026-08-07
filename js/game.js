@@ -13,57 +13,74 @@ async function loadCharacters() {
     gameState.activeCharacter = gameState.party[0];
 
     renderParty();
+
+    renderActiveCharacter();
 }
+
 
 
 function renderParty() {
 
     const partyArea = document.getElementById("party");
 
-partyArea.innerHTML += `
+    partyArea.innerHTML = "";
 
-<div>
 
-<h3>${character.name}</h3>
+    gameState.party.forEach(character => {
 
-<p>
-Class: ${character.class}<br>
-HP: ${character.hp}/${character.max_hp}<br>
-AC: ${character.ac}
-</p>
+        partyArea.innerHTML += `
 
-<button onclick="setActiveCharacter('${character.id}')">
-Select
-</button>
+        <div>
 
-</div>
+            <h3>${character.name}</h3>
 
-<hr>
+            <p>
+            Class: ${character.class}<br>
+            HP: ${character.hp}/${character.max_hp}<br>
+            AC: ${character.ac}
+            </p>
 
-`;
+            <button onclick="setActiveCharacter('${character.id}')">
+            Select
+            </button>
+
+        </div>
+
+        <hr>
+
+        `;
 
     });
 
 }
+
+
+
 function setActiveCharacter(id) {
+
 
     gameState.activeCharacter =
         gameState.party.find(
             character => character.id === id
         );
 
+
     renderActiveCharacter();
 
 }
 
 
+
 function renderActiveCharacter() {
+
 
     const activeArea =
         document.getElementById("active");
 
+
     const character =
         gameState.activeCharacter;
+
 
 
     activeArea.innerHTML = `
@@ -77,6 +94,9 @@ function renderActiveCharacter() {
         AC: ${character.ac}
 
     `;
+
 }
+
+
 
 loadCharacters();
