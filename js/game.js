@@ -224,7 +224,22 @@ function renderMap() {
 
 }
 
+function setActiveCharacter(id){
 
+    const character = gameState.party.find(
+        c => c.id === id
+    );
+
+
+    if(character){
+
+        gameState.activeCharacter = character;
+
+        renderActiveCharacter();
+
+    }
+
+}
 
 
 
