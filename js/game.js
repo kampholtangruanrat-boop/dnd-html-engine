@@ -242,8 +242,9 @@ function moveActiveCharacter(x,y){
         x,
         y,
     gameState.map
-    )){
-
+    ))
+    {
+        
 
         gameState.activeCharacter.position.x = x;
 
