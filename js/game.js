@@ -237,26 +237,42 @@ function moveActiveCharacter(x,y){
     }
 
 
+    const character =
+        gameState.activeCharacter;
+
+
     if(canMoveTo(
-        gameState.activeCharacter,
+        character,
         x,
         y,
-    gameState.map
-    ))
-    {
-        
+        gameState.map
+    )){
 
-        gameState.activeCharacter.position.x = x;
 
-        gameState.activeCharacter.position.y = y;
+        const cost =
+            getMovementCost(
+                character,
+                x,
+                y,
+                gameState.map
+            );
+
+
+        character.movement.remaining -= cost;
+
+
+        character.position.x = x;
+
+        character.position.y = y;
 
 
         console.log(
             "Moved",
-            gameState.activeCharacter.name,
-            "to",
-            x,
-            y
+            character.name,
+            "Cost:",
+            cost,
+            "Remaining:",
+            character.movement.remaining
         );
 
 
@@ -264,8 +280,8 @@ function moveActiveCharacter(x,y){
 
         renderActiveCharacter();
 
-
     }
+
 }
 
 loadGame();
