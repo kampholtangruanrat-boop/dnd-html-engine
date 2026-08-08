@@ -176,7 +176,7 @@ function renderMap() {
 
                token = `
 
-               <button onclick="setActiveCharacter('${character.id}')">
+              <button onclick="event.stopPropagation(); setActiveCharacter('${character.id}')">
 
                ${character.name[0]}
 
