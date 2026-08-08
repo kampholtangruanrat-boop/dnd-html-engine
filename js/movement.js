@@ -5,10 +5,11 @@ function canMoveTo(character,x,y){
         character.base_speed || 30;
 
 
-    const distance =
-        Math.abs(character.position.x - x)
-        +
-        Math.abs(character.position.y - y);
+     const distance =
+        Math.max(
+            Math.abs(character.position.x - x),
+            Math.abs(character.position.y - y)
+        );
 
 
 
