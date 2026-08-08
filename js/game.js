@@ -280,9 +280,16 @@ gameState.activeCharacter
 
     }
 
+if(canMoveTo(
+    gameState.activeCharacter,
+    x,
+    y
+)){
+    
 gameState.activeCharacter.position.x=x;
 gameState.activeCharacter.position.y=y;
 
+}
 
 console.log(
 "After move",
