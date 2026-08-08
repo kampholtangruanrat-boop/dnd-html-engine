@@ -23,7 +23,6 @@
     },
 
     "movement": {
-      "base_speed": 30,
       "remaining": 30,
 
       "types": {
@@ -67,7 +66,6 @@
     },
 
     "movement": {
-      "base_speed": 30,
       "remaining": 30,
 
       "types": {
