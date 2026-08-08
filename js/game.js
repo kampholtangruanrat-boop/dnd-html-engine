@@ -246,11 +246,31 @@ function setActiveCharacter(id){
 
 function moveActiveCharacter(x,y){
 
+    if(!gameState.activeCharacter){
+
+        console.log("No active character");
+
+        return;
+    }
+
+
+    gameState.activeCharacter.position.x = x;
+
+    gameState.activeCharacter.position.y = y;
+
+
     console.log(
-        "Clicked tile:",
+        "Moved",
+        gameState.activeCharacter.name,
+        "to",
         x,
         y
     );
+
+
+    renderMap();
+
+    renderActiveCharacter();
 
 }
 
