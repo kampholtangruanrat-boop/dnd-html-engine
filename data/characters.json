@@ -6,7 +6,12 @@
     "level": 1,
     "hp": 14,
     "max_hp": 14,
-    "ac": 16
+    "ac": 16,
+    "position": {
+      "x": 2,
+      "y": 2
+    },
+    "inventory": []
   },
   {
     "id": "mira",
@@ -15,7 +20,12 @@
     "level": 1,
     "hp": 16,
     "max_hp": 16,
-    "ac": 13
+    "ac": 13,
+    "position": {
+      "x": 3,
+      "y": 2
+    },
+    "inventory": []
   },
   {
     "id": "branik",
@@ -24,7 +34,12 @@
     "level": 1,
     "hp": 11,
     "max_hp": 11,
-    "ac": 16
+    "ac": 16,
+    "position": {
+      "x": 2,
+      "y": 3
+    },
+    "inventory": []
   },
   {
     "id": "elowen",
@@ -33,6 +48,11 @@
     "level": 1,
     "hp": 9,
     "max_hp": 9,
-    "ac": 10
+    "ac": 10,
+    "position": {
+      "x": 3,
+      "y": 3
+    },
+    "inventory": []
   }
 ]
