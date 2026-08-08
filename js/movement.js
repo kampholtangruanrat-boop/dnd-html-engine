@@ -2,7 +2,7 @@ function canMoveTo(character,x,y){
 
 
     const speed =
-        character.base_speed || 30;
+        character.movement.types.walk
 
 
      const distance =
