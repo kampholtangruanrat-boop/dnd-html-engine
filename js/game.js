@@ -246,31 +246,34 @@ function setActiveCharacter(id){
 
 function moveActiveCharacter(x,y){
 
-    if(!gameState.activeCharacter){
+if(!gameState.activeCharacter){
 
-        console.log("No active character");
+console.log("No active character");
 
-        return;
-    }
+return;
 
-
-    gameState.activeCharacter.position.x = x;
-
-    gameState.activeCharacter.position.y = y;
+}
 
 
-    console.log(
-        "Moved",
-        gameState.activeCharacter.name,
-        "to",
-        x,
-        y
-    );
+console.log(
+"Before move",
+gameState.activeCharacter
+);
 
 
-    renderMap();
+gameState.activeCharacter.position.x=x;
+gameState.activeCharacter.position.y=y;
 
-    renderActiveCharacter();
+
+console.log(
+"After move",
+gameState.activeCharacter
+);
+
+
+renderMap();
+
+renderActiveCharacter();
 
 }
 
