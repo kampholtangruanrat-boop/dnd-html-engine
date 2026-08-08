@@ -1,48 +1,89 @@
 let gameState = {
+
     party: [],
+
+    map: null,
+
     activeCharacter: null
+
 };
 
 
-async function loadCharacters() {
 
-    const response = await fetch("data/characters.json");
+async function loadGame() {
 
-    gameState.party = await response.json();
 
-    gameState.activeCharacter = gameState.party[0];
+    const characterResponse =
+        await fetch("data/characters.json");
+
+
+    gameState.party =
+        await characterResponse.json();
+
+
+
+    const mapResponse =
+        await fetch("data/map.json");
+
+
+    gameState.map =
+        await mapResponse.json();
+
+
+
+    gameState.activeCharacter =
+        gameState.party[0];
+
+
 
     renderParty();
 
     renderActiveCharacter();
+
+    renderMap();
+
 }
+
+
 
 
 
 function renderParty() {
 
-    const partyArea = document.getElementById("party");
+
+    const partyArea =
+        document.getElementById("party");
+
 
     partyArea.innerHTML = "";
 
 
+
     gameState.party.forEach(character => {
+
 
         partyArea.innerHTML += `
 
         <div>
 
-            <h3>${character.name}</h3>
+        <h3>${character.name}</h3>
 
-            <p>
-            Class: ${character.class}<br>
-            HP: ${character.hp}/${character.max_hp}<br>
-            AC: ${character.ac}
-            </p>
+        Class: ${character.class}<br>
 
-            <button onclick="setActiveCharacter('${character.id}')">
-            Select
-            </button>
+        HP:
+        ${character.hp}/${character.max_hp}<br>
+
+        AC:
+        ${character.ac}
+
+        <br>
+
+        <button onclick="setActiveCharacter('${character.id}')">
+
+        Select
+
+        </button>
+
 
         </div>
 
@@ -50,9 +91,13 @@ function renderParty() {
 
         `;
 
+
     });
 
+
 }
+
+
 
 
 
@@ -61,7 +106,7 @@ function setActiveCharacter(id) {
 
     gameState.activeCharacter =
         gameState.party.find(
-            character => character.id === id
+            c => c.id === id
         );
 
 
@@ -71,27 +116,36 @@ function setActiveCharacter(id) {
 
 
 
+
+
 function renderActiveCharacter() {
 
 
-    const activeArea =
+    const area =
         document.getElementById("active");
 
 
-    const character =
+    const c =
         gameState.activeCharacter;
 
 
 
-    activeArea.innerHTML = `
+    area.innerHTML = `
 
-        <h2>Active Character</h2>
+    <h2>
+    Active Character
+    </h2>
 
-        <h3>${character.name}</h3>
+    <h3>${c.name}</h3>
 
-        Class: ${character.class}<br>
-        HP: ${character.hp}/${character.max_hp}<br>
-        AC: ${character.ac}
+    Class:
+    ${c.class}<br>
+
+    HP:
+    ${c.hp}/${c.max_hp}<br>
+
+    AC:
+    ${c.ac}
 
     `;
 
@@ -99,4 +153,66 @@ function renderActiveCharacter() {
 
 
 
-loadCharacters();
+
+
+function renderMap() {
+
+
+    const map =
+        document.getElementById("map");
+
+
+    map.innerHTML = "";
+
+
+
+    for(let y=1; y<=gameState.map.height; y++){
+
+
+        for(let x=1; x<=gameState.map.width; x++){
+
+
+            let token = "";
+
+
+
+            const character =
+                gameState.party.find(
+                    c =>
+                    c.position.x === x &&
+                    c.position.y === y
+                );
+
+
+
+            if(character){
+
+                token =
+                character.name[0];
+
+            }
+
+
+
+            map.innerHTML += `
+
+            <div class="tile">
+
+            ${token}
+
+            </div>
+
+            `;
+
+
+        }
+
+    }
+
+}
+
+
+
+
+
+loadGame();
