@@ -260,6 +260,25 @@ console.log(
 gameState.activeCharacter
 );
 
+    const occupied =
+    gameState.party.find(
+        c =>
+        c !== gameState.activeCharacter &&
+        c.position.x === x &&
+        c.position.y === y
+    );
+
+
+    if(occupied){
+
+        console.log(
+            "Tile occupied by",
+            occupied.name
+        );
+
+    return;
+
+    }
 
 gameState.activeCharacter.position.x=x;
 gameState.activeCharacter.position.y=y;
