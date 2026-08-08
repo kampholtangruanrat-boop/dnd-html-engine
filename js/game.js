@@ -105,25 +105,6 @@ function renderParty() {
 
 
 
-
-
-function setActiveCharacter(id) {
-
-
-    gameState.activeCharacter =
-        gameState.party.find(
-            c => c.id === id
-        );
-
-
-    renderActiveCharacter();
-
-}
-
-
-
-
-
 function renderActiveCharacter() {
 
 
@@ -239,68 +220,50 @@ function setActiveCharacter(id){
         gameState.activeCharacter = character;
 
         renderActiveCharacter();
-
+        renderMap();
+        
     }
 
 }
 
 function moveActiveCharacter(x,y){
 
-if(!gameState.activeCharacter){
+    if(!gameState.activeCharacter){
 
-console.log("No active character");
+        console.log("No active character");
 
-return;
-
-}
-
-
-console.log(
-"Before move",
-gameState.activeCharacter
-);
-
-    const occupied =
-    gameState.party.find(
-        c =>
-        c !== gameState.activeCharacter &&
-        c.position.x === x &&
-        c.position.y === y
-    );
-
-
-    if(occupied){
-
-        console.log(
-            "Tile occupied by",
-            occupied.name
-        );
-
-    return;
+        return;
 
     }
 
-if(canMoveTo(
-    gameState.activeCharacter,
-    x,
-    y
-)){
-    
-gameState.activeCharacter.position.x=x;
-gameState.activeCharacter.position.y=y;
 
-}
-
-console.log(
-"After move",
-gameState.activeCharacter
-);
+    if(canMoveTo(
+        gameState.activeCharacter,
+        x,
+        y
+    )){
 
 
-renderMap();
+        gameState.activeCharacter.position.x = x;
 
-renderActiveCharacter();
+        gameState.activeCharacter.position.y = y;
 
+
+        console.log(
+            "Moved",
+            gameState.activeCharacter.name,
+            "to",
+            x,
+            y
+        );
+
+
+        renderMap();
+
+        renderActiveCharacter();
+
+
+    }
 }
 
 loadGame();
