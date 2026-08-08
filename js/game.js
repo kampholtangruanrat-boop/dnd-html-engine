@@ -12,6 +12,8 @@ let gameState = {
 
 async function loadGame() {
 
+    console.log("Game loading");
+
 
     const characterResponse =
         await fetch("data/characters.json");
@@ -19,6 +21,9 @@ async function loadGame() {
 
     gameState.party =
         await characterResponse.json();
+
+
+    console.log("Characters loaded", gameState.party);
 
 
 
@@ -30,10 +35,12 @@ async function loadGame() {
         await mapResponse.json();
 
 
+    console.log("Map loaded", gameState.map);
+
+
 
     gameState.activeCharacter =
         gameState.party[0];
-
 
 
     renderParty();
@@ -43,7 +50,6 @@ async function loadGame() {
     renderMap();
 
 }
-
 
 
 
