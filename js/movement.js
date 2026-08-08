@@ -1,35 +1,35 @@
-function canMoveTo(character,x,y){
+function canMoveTo(character,x,y,map){
+
+    const remaining =
+        character.movement.remaining;
 
 
-    const speed =
-        character.movement.types.walk
-
-
-     const distance =
+    const distance =
         Math.max(
             Math.abs(character.position.x - x),
             Math.abs(character.position.y - y)
         );
 
 
-
     const cost =
-        distance * 5;
+        distance * map.rules.feetPerSquare;
 
 
-
-    if(cost > speed){
+    if(cost > remaining){
 
         console.log(
             "Too far",
             cost,
             "/",
-            speed
+            remaining
         );
 
         return false;
 
     }
+
+
+    character.movement.remaining -= cost;
 
 
     return true;
