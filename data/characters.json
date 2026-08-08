@@ -3,56 +3,86 @@
     "id": "kenji",
     "name": "Kenji",
     "class": "Fighter",
+
     "level": 1,
+
     "hp": 14,
     "max_hp": 14,
     "ac": 16,
+
+    "size": "Medium",
+    "faction": "player",
+
+    "abilities": {
+      "str": 16,
+      "dex": 10,
+      "con": 14,
+      "int": 10,
+      "wis": 12,
+      "cha": 8
+    },
+
+    "movement": {
+      "base_speed": 30,
+      "remaining": 30,
+
+      "types": {
+        "walk": 30,
+        "climb": 0,
+        "swim": 0,
+        "fly": 0
+      }
+    },
+
+    "conditions": [],
+
     "position": {
       "x": 2,
       "y": 2
-    },
-    "inventory": []
+    }
   },
+
+
   {
     "id": "mira",
     "name": "Mira",
     "class": "Ranger",
+
     "level": 1,
+
     "hp": 16,
     "max_hp": 16,
     "ac": 13,
+
+    "size": "Medium",
+    "faction": "player",
+
+    "abilities": {
+      "str": 10,
+      "dex": 16,
+      "con": 12,
+      "int": 10,
+      "wis": 14,
+      "cha": 10
+    },
+
+    "movement": {
+      "base_speed": 30,
+      "remaining": 30,
+
+      "types": {
+        "walk": 30,
+        "climb": 0,
+        "swim": 0,
+        "fly": 0
+      }
+    },
+
+    "conditions": [],
+
     "position": {
       "x": 3,
       "y": 2
-    },
-    "inventory": []
-  },
-  {
-    "id": "branik",
-    "name": "Branik",
-    "class": "Fighter",
-    "level": 1,
-    "hp": 11,
-    "max_hp": 11,
-    "ac": 16,
-    "position": {
-      "x": 2,
-      "y": 3
-    },
-    "inventory": []
-  },
-  {
-    "id": "elowen",
-    "name": "Elowen",
-    "class": "Wizard",
-    "level": 1,
-    "hp": 9,
-    "max_hp": 9,
-    "ac": 10,
-    "position": {
-      "x": 3,
-      "y": 3
-    },
-    "inventory": []
+    }
   }
 ]
