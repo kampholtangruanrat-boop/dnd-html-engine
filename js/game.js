@@ -209,7 +209,10 @@ function renderMap() {
 
             map.innerHTML += `
 
-            <div class="tile">
+            <div 
+            class="tile"
+            onclick="moveActiveCharacter(${x},${y})"
+            >
 
             ${token}
 
@@ -241,6 +244,14 @@ function setActiveCharacter(id){
 
 }
 
+function moveActiveCharacter(x,y){
 
+    console.log(
+        "Clicked tile:",
+        x,
+        y
+    );
+
+}
 
 loadGame();
