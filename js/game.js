@@ -240,7 +240,8 @@ function moveActiveCharacter(x,y){
     if(canMoveTo(
         gameState.activeCharacter,
         x,
-        y
+        y,
+    gameState.map
     )){
 
 
