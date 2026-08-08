@@ -193,10 +193,17 @@ function renderMap() {
 
             if(character){
 
-                token =
-                character.name[0];
+               token = `
 
-            }
+               <button onclick="setActiveCharacter('${character.id}')">
+
+               ${character.name[0]}
+
+               </button>
+
+                `;
+
+ }
 
 
 
