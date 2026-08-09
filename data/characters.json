@@ -24,6 +24,7 @@
 
     "movement": {
       "remaining": 30,
+       "spent":0,
 
       "types": {
         "walk": 30,
@@ -67,6 +68,7 @@
 
     "movement": {
       "remaining": 30,
+       "spent":0,
 
       "types": {
         "walk": 30,
