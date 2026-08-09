@@ -260,12 +260,36 @@ function moveActiveCharacter(x,y){
             );
 
 
-        character.movement.remaining -= cost;
 
 
-        character.position.x = x;
 
-        character.position.y = y;
+        gameState.movementHistory.push({
+
+    character: character.id,
+
+    from:{
+        x:character.position.x,
+        y:character.position.y
+    },
+
+    to:{
+        x:x,
+        y:y
+    },
+
+    cost:result.cost
+
+});
+
+
+character.position.x = x;
+
+character.position.y = y;
+
+
+character.movement.remaining -= result.cost;
+
+character.movement.spent += result.cost;
 
 
         console.log(
@@ -285,5 +309,64 @@ function moveActiveCharacter(x,y){
     }
 
 }
+
+function undoMove(){
+
+    const lastMove =
+        gameState.movementHistory.pop();
+
+
+    if(!lastMove){
+
+        console.log("No movement to undo");
+
+        return;
+
+    }
+
+
+    const character =
+        gameState.party.find(
+            c => c.id === lastMove.character
+        );
+
+
+    if(!character){
+
+        console.log("Character not found");
+
+        return;
+
+    }
+
+
+    character.position.x =
+        lastMove.from.x;
+
+    character.position.y =
+        lastMove.from.y;
+
+
+    character.movement.remaining +=
+        lastMove.cost;
+
+
+    character.movement.spent -=
+        lastMove.cost;
+
+
+    console.log(
+        "Undo movement",
+        character.name
+    );
+
+
+    renderMap();
+
+    renderActiveCharacter();
+
+}
+
+
 
 loadGame();
