@@ -4,7 +4,9 @@ let gameState = {
 
     map: null,
 
-    activeCharacter: null
+    activeCharacter: null,
+    
+    movementHistory:[]
 
 };
 
