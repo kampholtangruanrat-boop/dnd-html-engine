@@ -243,60 +243,52 @@ function moveActiveCharacter(x,y){
         gameState.activeCharacter;
 
 
-    if(canMoveTo(
-        character,
-        x,
-        y,
-        gameState.map
-    )){
+    const result =
+        canMoveTo(
+            character,
+            x,
+            y,
+            gameState.map
+        );
 
 
-        const cost =
-            getMovementCost(
-                character,
-                x,
-                y,
-                gameState.map
-            );
-
-
-
+    if(result.allowed){
 
 
         gameState.movementHistory.push({
 
-    character: character.id,
+            character: character.id,
 
-    from:{
-        x:character.position.x,
-        y:character.position.y
-    },
+            from:{
+                x:character.position.x,
+                y:character.position.y
+            },
 
-    to:{
-        x:x,
-        y:y
-    },
+            to:{
+                x:x,
+                y:y
+            },
 
-    cost:result.cost
+            cost:result.cost
 
-});
-
-
-character.position.x = x;
-
-character.position.y = y;
+        });
 
 
-character.movement.remaining -= result.cost;
+        character.position.x = x;
 
-character.movement.spent += result.cost;
+        character.position.y = y;
+
+
+        character.movement.remaining -= result.cost;
+
+        character.movement.spent += result.cost;
 
 
         console.log(
             "Moved",
             character.name,
             "Cost:",
-            cost,
+            result.cost,
             "Remaining:",
             character.movement.remaining
         );
