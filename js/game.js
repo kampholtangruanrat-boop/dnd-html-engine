@@ -5,10 +5,12 @@ let gameState = {
     map: null,
 
     activeCharacter: null,
-    
-    movementHistory:[]
+
+    movementHistory: []
 
 };
+
+
 
 
 
@@ -25,7 +27,10 @@ async function loadGame() {
         await characterResponse.json();
 
 
-    console.log("Characters loaded", gameState.party);
+    console.log(
+        "Characters loaded",
+        gameState.party
+    );
 
 
 
@@ -37,12 +42,16 @@ async function loadGame() {
         await mapResponse.json();
 
 
-    console.log("Map loaded", gameState.map);
+    console.log(
+        "Map loaded",
+        gameState.map
+    );
 
 
 
     gameState.activeCharacter =
         gameState.party[0];
+
 
 
     renderParty();
@@ -56,8 +65,8 @@ async function loadGame() {
 
 
 
-function renderParty() {
 
+function renderParty(){
 
     const partyArea =
         document.getElementById("party");
@@ -76,7 +85,8 @@ function renderParty() {
 
         <h3>${character.name}</h3>
 
-        Class: ${character.class}<br>
+        Class:
+        ${character.class}<br>
 
         HP:
         ${character.hp}/${character.max_hp}<br>
@@ -85,6 +95,7 @@ function renderParty() {
         ${character.ac}
 
         <br>
+
 
         <button onclick="setActiveCharacter('${character.id}')">
 
@@ -102,12 +113,42 @@ function renderParty() {
 
     });
 
+}
+
+
+
+
+
+function setActiveCharacter(id){
+
+
+    const character =
+        gameState.party.find(
+            c => c.id === id
+        );
+
+
+
+    if(character){
+
+
+        gameState.activeCharacter =
+            character;
+
+
+        renderActiveCharacter();
+
+        renderMap();
+
+    }
 
 }
 
 
 
-function renderActiveCharacter() {
+
+
+function renderActiveCharacter(){
 
 
     const area =
@@ -125,18 +166,38 @@ function renderActiveCharacter() {
     Active Character
     </h2>
 
+
     <h3>${c.name}</h3>
+
 
     Class:
     ${c.class}<br>
 
+
     HP:
     ${c.hp}/${c.max_hp}<br>
 
+
     AC:
-    ${c.ac}
+    ${c.ac}<br>
+
+
+    Movement:
+    ${c.movement.remaining}/${c.movement.types.walk}
+
+
+    <br><br>
+
+
+    <button onclick="undoMove()">
+
+    Undo Movement
+
+    </button>
+
 
     `;
+
 
 }
 
@@ -144,7 +205,7 @@ function renderActiveCharacter() {
 
 
 
-function renderMap() {
+function renderMap(){
 
 
     const map =
@@ -161,6 +222,7 @@ function renderMap() {
         for(let x=1; x<=gameState.map.width; x++){
 
 
+
             let token = "";
 
 
@@ -174,32 +236,49 @@ function renderMap() {
 
 
 
+
             if(character){
 
-               token = `
 
-              <button onclick="event.stopPropagation(); setActiveCharacter('${character.id}')">
+                token = `
 
-               ${character.name[0]}
 
-               </button>
+                <button 
+                onclick="
+                event.stopPropagation();
+                setActiveCharacter('${character.id}')
+                ">
+
+
+                ${character.name[0]}
+
+
+                </button>
+
 
                 `;
 
- }
+            }
+
+
 
 
 
             map.innerHTML += `
 
-            <div 
+
+            <div
+
             class="tile"
+
             onclick="moveActiveCharacter(${x},${y})"
+
             >
 
             ${token}
 
             </div>
+
 
             `;
 
@@ -208,27 +287,16 @@ function renderMap() {
 
     }
 
-}
-
-function setActiveCharacter(id){
-
-    const character = gameState.party.find(
-        c => c.id === id
-    );
-
-
-    if(character){
-
-        gameState.activeCharacter = character;
-
-        renderActiveCharacter();
-        renderMap();
-        
-    }
 
 }
+
+
+
+
 
 function moveActiveCharacter(x,y){
+
+
 
     if(!gameState.activeCharacter){
 
@@ -239,8 +307,10 @@ function moveActiveCharacter(x,y){
     }
 
 
+
     const character =
         gameState.activeCharacter;
+
 
 
     const result =
@@ -252,155 +322,277 @@ function moveActiveCharacter(x,y){
         );
 
 
-    if(result.allowed){
 
-
-        gameState.movementHistory.push({
-
-            character: character.id,
-
-            from:{
-                x:character.position.x,
-                y:character.position.y
-            },
-
-            to:{
-                x:x,
-                y:y
-            },
-
-            cost:result.cost
-
-        });
-
-
-        character.position.x = x;
-
-        character.position.y = y;
-
-
-        character.movement.remaining -= result.cost;
-
-        character.movement.spent += result.cost;
-
-
-        console.log(
-            "Moved",
-            character.name,
-            "Cost:",
-            result.cost,
-            "Remaining:",
-            character.movement.remaining
-        );
-
-
-        renderMap();
-
-        renderActiveCharacter();
-
-    }
-
-}
-
-function canMoveTo(character,x,y,map){
-
-    const remaining =
-        character.movement.remaining;
-
-
-    const distance =
-        Math.max(
-            Math.abs(character.position.x - x),
-            Math.abs(character.position.y - y)
-        );
-
-
-    const cost =
-        distance * map.rules.feetPerSquare;
-
-
-    if(cost > remaining){
-
-        console.log(
-            "Too far",
-            cost,
-            "/",
-            remaining
-        );
-
-
-        return {
-            allowed:false,
-            cost:0
-        };
-
-    }
-
-
-    return {
-        allowed:true,
-        cost:cost
-    };
-
-}
-
-
-function undoMove(){
-
-    const lastMove =
-        gameState.movementHistory.pop();
-
-
-    if(!lastMove){
-
-        console.log("No movement to undo");
+    if(!result.allowed){
 
         return;
 
     }
 
 
-    const character =
-        gameState.party.find(
-            c => c.id === lastMove.character
-        );
 
 
-    if(!character){
-
-        console.log("Character not found");
-
-        return;
-
-    }
+    gameState.movementHistory.push({
 
 
-    character.position.x =
-        lastMove.from.x;
-
-    character.position.y =
-        lastMove.from.y;
+        character:
+        character.id,
 
 
-    character.movement.remaining +=
-        lastMove.cost;
+        from:{
+
+            x:
+            character.position.x,
 
 
-    character.movement.spent -=
-        lastMove.cost;
+            y:
+            character.position.y
+
+        },
+
+
+        to:{
+
+            x:x,
+
+            y:y
+
+        },
+
+
+        cost:
+        result.cost
+
+
+    });
+
+
+
+
+
+    character.position.x = x;
+
+    character.position.y = y;
+
+
+
+    character.movement.remaining -= result.cost;
+
+
+    character.movement.spent += result.cost;
+
 
 
     console.log(
-        "Undo movement",
-        character.name
+
+        "Moved",
+        character.name,
+
+        "Cost:",
+        result.cost,
+
+        "Remaining:",
+        character.movement.remaining
+
     );
+
 
 
     renderMap();
 
     renderActiveCharacter();
 
+
 }
+
+
+
+
+
+function canMoveTo(character,x,y,map){
+
+
+    const remaining =
+        character.movement.remaining;
+
+
+
+    const distance =
+
+        Math.max(
+
+            Math.abs(
+                character.position.x - x
+            ),
+
+            Math.abs(
+                character.position.y - y
+            )
+
+        );
+
+
+
+    const cost =
+
+        distance *
+        map.rules.feetPerSquare;
+
+
+
+
+
+    if(cost > remaining){
+
+
+        console.log(
+
+            "Too far",
+
+            cost,
+
+            "/",
+
+            remaining
+
+        );
+
+
+        return {
+
+            allowed:false,
+
+            cost:0
+
+        };
+
+
+    }
+
+
+
+
+
+    return {
+
+
+        allowed:true,
+
+        cost:cost
+
+
+    };
+
+
+}
+
+
+
+
+
+
+
+function undoMove(){
+
+
+
+    const lastMove =
+
+        gameState.movementHistory.pop();
+
+
+
+    if(!lastMove){
+
+
+        console.log(
+            "No movement to undo"
+        );
+
+
+        return;
+
+    }
+
+
+
+
+
+    const character =
+
+        gameState.party.find(
+
+            c =>
+            c.id === lastMove.character
+
+        );
+
+
+
+
+
+    if(!character){
+
+        return;
+
+    }
+
+
+
+
+
+
+    character.position.x =
+
+        lastMove.from.x;
+
+
+
+    character.position.y =
+
+        lastMove.from.y;
+
+
+
+
+
+    character.movement.remaining +=
+
+        lastMove.cost;
+
+
+
+    character.movement.spent -=
+
+        lastMove.cost;
+
+
+
+
+
+    console.log(
+
+        "Undo",
+
+        character.name
+
+    );
+
+
+
+
+
+    renderMap();
+
+    renderActiveCharacter();
+
+
+
+}
+
+
+
+
 
 
 
