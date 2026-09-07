@@ -20,6 +20,20 @@ function getMapTile(map,x,y){
 }
 
 
+function isInsideMap(map,x,y){
+
+    return Boolean(
+        map &&
+        Number.isInteger(x) &&
+        Number.isInteger(y) &&
+        x >= 1 &&
+        y >= 1 &&
+        x <= map.width &&
+        y <= map.height
+    );
+}
+
+
 function isDifficultTerrain(map,x,y){
 
     const tile =
@@ -32,6 +46,10 @@ function isDifficultTerrain(map,x,y){
 
 
 function blocksDiagonalCorner(map,x,y){
+
+    if(!isInsideMap(map,x,y)){
+        return true;
+    }
 
     const tile =
         getMapTile(map,x,y);
@@ -74,6 +92,17 @@ function getCreatureFootprint(character,x = character.position.x,y = character.p
         squares: squares,
         sizeIndex: size
     };
+}
+
+
+function isFootprintInsideMap(map,character,x,y){
+
+    const footprint =
+        getCreatureFootprint(character,x,y);
+
+    return footprint.squares.every(square =>
+        isInsideMap(map,square.x,square.y)
+    );
 }
 
 
@@ -157,7 +186,8 @@ function getOccupantsAt(characters,x,y){
             getCreatureFootprint(character);
 
         return footprint.squares.some(square =>
-            square.x === x && square.y === y
+            square.x === x &&
+            square.y === y
         );
     });
 }
@@ -226,16 +256,6 @@ function canPassThroughCreature(character,other){
 }
 
 
-function canEndMoveInCreatureSpace(character,other){
-
-    if(!other || other.id === character.id){
-        return true;
-    }
-
-    return false;
-}
-
-
 function getCreatureMovementCost(character,other,map){
 
     if(isAlly(character,other) || other.size === "Tiny"){
@@ -247,6 +267,14 @@ function getCreatureMovementCost(character,other,map){
 
 
 function evaluateSquare(character,x,y,map,characters,isFinal){
+
+    if(!isInsideMap(map,x,y)){
+        return {
+            allowed:false,
+            cost:0,
+            occupants:[]
+        };
+    }
 
     const occupants =
         getOccupantsAt(characters,x,y).filter(other =>
@@ -315,7 +343,17 @@ function evaluateFootprint(character,x,y,map,characters,isFinal){
     const footprint =
         getCreatureFootprint(character,x,y);
 
-    let totalCost = 0;
+    if(!isFootprintInsideMap(map,character,x,y)){
+        return {
+            allowed:false,
+            cost:0,
+            occupants:[]
+        };
+    }
+
+    let movementCost =
+        map.rules.feetPerSquare;
+
     const occupants = [];
 
     for(const square of footprint.squares){
@@ -338,7 +376,8 @@ function evaluateFootprint(character,x,y,map,characters,isFinal){
             };
         }
 
-        totalCost += result.cost;
+        movementCost =
+            Math.max(movementCost,result.cost);
 
         for(const occupant of result.occupants){
             if(!occupants.some(existing => existing.id === occupant.id)){
@@ -349,7 +388,7 @@ function evaluateFootprint(character,x,y,map,characters,isFinal){
 
     return {
         allowed:true,
-        cost:totalCost,
+        cost:movementCost,
         occupants:occupants
     };
 }
