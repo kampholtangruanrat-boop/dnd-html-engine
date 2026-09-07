@@ -7,5 +7,18 @@
     "diagonalMovement":"standard"
   },
 
-  "tiles":[]
+  "tiles":[
+    {
+      "x":4,
+      "y":3,
+      "terrain":"mud",
+      "difficult":true
+    },
+    {
+      "x":4,
+      "y":4,
+      "terrain":"mud",
+      "difficult":true
+    }
+  ]
 }
