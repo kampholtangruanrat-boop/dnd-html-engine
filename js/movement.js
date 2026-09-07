@@ -148,3 +148,24 @@ function undoMovement(character,transaction){
         cost:transaction.cost
     };
 }
+
+
+function resetMovement(character){
+
+    if(!character || !character.movement){
+
+        return {
+            success:false
+        };
+
+    }
+
+    character.movement.remaining =
+        character.movement.types.walk;
+
+    character.movement.spent = 0;
+
+    return {
+        success:true
+    };
+}
