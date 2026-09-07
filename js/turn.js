@@ -4,99 +4,394 @@ function getAbilityModifier(score){
 }
 
 
-function rollInitiative(character,rng = Math.random){
+function getInitiativeModifier(character){
 
-    const roll =
-        Math.floor(rng() * 20) + 1;
+    if(!character || !character.abilities){
+        return 0;
+    }
 
-    const dexModifier =
-        getAbilityModifier(character.abilities.dex);
+    if(typeof character.initiativeModifier === "number"){
+        return character.initiativeModifier;
+    }
 
-    return {
-        roll: roll,
-        modifier: dexModifier,
-        total: roll + dexModifier
-    };
+    return getAbilityModifier(character.abilities.dex);
 }
 
 
-function resetTurnResources(character){
+function getCombatantControl(character){
 
-    if(!character || !character.movement){
-
-        return {
-            success:false
-        };
-
+    if(!character){
+        return "unknown";
     }
 
-    character.movement.remaining =
-        character.movement.types.walk;
+    if(character.control === "player" || character.control === "enemy"){
+        return character.control;
+    }
 
-    character.movement.spent = 0;
+    if(character.faction === "player"){
+        return "player";
+    }
 
-    character.turnResources = {
-        actionUsed:false,
-        bonusActionUsed:false,
-        reactionUsed:false
-    };
-
-    return {
-        success:true
-    };
+    return "enemy";
 }
 
 
-function initializeCombat(characters,rng = Math.random){
+function getInitiativeGroupId(character){
 
-    if(!characters || characters.length === 0){
-
-        return {
-            success:false,
-            state:null
-        };
+    if(!character){
+        return null;
     }
 
-    const initiative =
-        characters.map((character,index) => {
+    if(character.initiativeGroupId){
+        return character.initiativeGroupId;
+    }
 
-            const result =
-                rollInitiative(character,rng);
+    return null;
+}
 
-            return {
-                characterId:character.id,
-                roll:result.roll,
-                modifier:result.modifier,
-                total:result.total,
-                order:index
+
+function createRollRequestId(state, index){
+
+    return `initiative-${state.combatId}-${index + 1}`;
+}
+
+
+function createInitiativeRollRequests(state, characters){
+
+    const requests = [];
+    const groupedEnemyRequests = {};
+
+    characters.forEach((character,index) => {
+
+        const control = getCombatantControl(character);
+        const groupId = getInitiativeGroupId(character);
+
+        if(control === "enemy" && groupId){
+
+            if(groupedEnemyRequests[groupId]){
+                return;
+            }
+
+            const request = {
+                rollId:createRollRequestId(state,requests.length),
+                type:"initiative",
+                actorId:groupId,
+                control:"enemy",
+                dice:{count:1,sides:20},
+                mode:"normal",
+                source:"python_rng",
+                status:"pending"
             };
-        });
 
-    initiative.sort((a,b) => {
-
-        if(b.total !== a.total){
-            return b.total - a.total;
+            groupedEnemyRequests[groupId] = request.rollId;
+            requests.push(request);
+            return;
         }
 
-        return a.order - b.order;
+        requests.push({
+            rollId:createRollRequestId(state,requests.length),
+            type:"initiative",
+            actorId:character.id,
+            control:control,
+            dice:{count:1,sides:20},
+            mode:"normal",
+            source:control === "player" ? "player" : "python_rng",
+            status:"pending"
+        });
     });
 
-    const state = {
-        active:true,
-        round:1,
-        turnIndex:0,
-        initiative:initiative
-    };
+    state.pendingRolls = requests;
+    return requests;
+}
 
-    const result =
-        beginTurn(state,characters);
 
-    if(!result.success){
+function createCombatState(characters, options = {}){
+
+    if(!Array.isArray(characters) || characters.length === 0){
         return {
             success:false,
             state:null
         };
     }
+
+    const combatId =
+        options.combatId || `combat-${Date.now()}`;
+
+    const state = {
+        combatId:combatId,
+        active:true,
+        phase:"initiative_pending",
+        round:0,
+        turnIndex:-1,
+        initiative:[],
+        combatants:characters.map(character => ({
+            characterId:character.id,
+            control:getCombatantControl(character),
+            initiativeGroupId:getInitiativeGroupId(character),
+            initiativeModifier:getInitiativeModifier(character),
+            initiativeRoll:null,
+            initiativeTotal:null,
+            surprised:false
+        })),
+        pendingRolls:[],
+        pendingConfirmation:null,
+        pendingReaction:null,
+        eventSequence:0
+    };
+
+    createInitiativeRollRequests(state,characters);
+
+    return {
+        success:true,
+        state:state
+    };
+}
+
+
+function initializeCombat(characters, options = {}){
+
+    return createCombatState(characters,options);
+}
+
+
+function getPendingRoll(state,rollId){
+
+    if(!state || !Array.isArray(state.pendingRolls)){
+        return null;
+    }
+
+    return state.pendingRolls.find(roll => roll.rollId === rollId) || null;
+}
+
+
+function validateD20Result(result){
+
+    return Number.isInteger(result) && result >= 1 && result <= 20;
+}
+
+
+function resolveInitiativeRoll(request, results){
+
+    if(!request || !Array.isArray(results)){
+        return {
+            success:false,
+            reason:"Invalid roll request or results"
+        };
+    }
+
+    const requiredCount = request.dice.count;
+
+    if(results.length !== requiredCount){
+        return {
+            success:false,
+            reason:"Incorrect number of dice results"
+        };
+    }
+
+    if(!results.every(validateD20Result)){
+        return {
+            success:false,
+            reason:"Initiative results must be integers from 1 to 20"
+        };
+    }
+
+    let selected = results[0];
+
+    if(request.mode === "advantage"){
+        selected = Math.max(...results);
+    }
+
+    if(request.mode === "disadvantage"){
+        selected = Math.min(...results);
+    }
+
+    return {
+        success:true,
+        selected:selected,
+        results:[...results]
+    };
+}
+
+
+function submitInitiativeRoll(state, rollId, results, characters){
+
+    if(!state || state.phase !== "initiative_pending"){
+        return {
+            success:false,
+            state:state,
+            reason:"Initiative rolls are not pending"
+        };
+    }
+
+    const request = getPendingRoll(state,rollId);
+
+    if(!request){
+        return {
+            success:false,
+            state:state,
+            reason:"Unknown roll request"
+        };
+    }
+
+    const roll = resolveInitiativeRoll(request,results);
+
+    if(!roll.success){
+        return {
+            success:false,
+            state:state,
+            reason:roll.reason
+        };
+    }
+
+    const groupId = request.actorId;
+    const combatants = state.combatants.filter(combatant => {
+        if(request.control === "enemy" && groupId){
+            return combatant.initiativeGroupId === groupId;
+        }
+
+        return combatant.characterId === request.actorId;
+    });
+
+    if(combatants.length === 0){
+        return {
+            success:false,
+            state:state,
+            reason:"No combatant matches roll request"
+        };
+    }
+
+    combatants.forEach(combatant => {
+        combatant.initiativeRoll = roll.selected;
+        combatant.initiativeTotal =
+            roll.selected + combatant.initiativeModifier;
+    });
+
+    request.status = "resolved";
+    request.results = roll.results;
+    request.selected = roll.selected;
+
+    return {
+        success:true,
+        state:state,
+        allRollsResolved:state.pendingRolls.every(item => item.status === "resolved"),
+        result:roll
+    };
+}
+
+
+function getInitiativeTieGroups(state){
+
+    const byTotal = {};
+
+    state.combatants.forEach(combatant => {
+
+        if(combatant.initiativeTotal === null){
+            return;
+        }
+
+        if(!byTotal[combatant.initiativeTotal]){
+            byTotal[combatant.initiativeTotal] = [];
+        }
+
+        byTotal[combatant.initiativeTotal].push(combatant);
+    });
+
+    return Object.entries(byTotal)
+        .filter(([,group]) => group.length > 1)
+        .map(([total,group]) => ({
+            total:Number(total),
+            combatants:group
+        }));
+}
+
+
+function validateTieBreakerOrder(group, orderIds){
+
+    if(!Array.isArray(orderIds) || orderIds.length !== group.combatants.length){
+        return false;
+    }
+
+    const expected = group.combatants
+        .map(combatant => combatant.characterId)
+        .sort();
+
+    const received = [...orderIds].sort();
+
+    return expected.every((id,index) => id === received[index]);
+}
+
+
+function buildInitiativeOrder(state, tieBreakers = {}){
+
+    if(!state || state.phase !== "initiative_pending"){
+        return {
+            success:false,
+            state:state,
+            reason:"Initiative is not pending"
+        };
+    }
+
+    if(state.pendingRolls.some(request => request.status !== "resolved")){
+        return {
+            success:false,
+            state:state,
+            reason:"All initiative RollRequests must be resolved before initiative can be finalized"
+        };
+    }
+
+    const tieGroups = getInitiativeTieGroups(state);
+
+    for(const group of tieGroups){
+
+        const key = String(group.total);
+        const order = tieBreakers[key];
+
+        if(!validateTieBreakerOrder(group,order)){
+            return {
+                success:false,
+                state:state,
+                status:"needs_tiebreak",
+                reason:"Initiative tie requires an explicit order",
+                tieGroups:tieGroups
+            };
+        }
+    }
+
+    const tieRank = {};
+
+    Object.entries(tieBreakers).forEach(([,ids]) => {
+        ids.forEach((id,index) => {
+            tieRank[id] = index;
+        });
+    });
+
+    state.initiative =
+        state.combatants
+            .slice()
+            .sort((a,b) => {
+
+                if(b.initiativeTotal !== a.initiativeTotal){
+                    return b.initiativeTotal - a.initiativeTotal;
+                }
+
+                const aRank =
+                    tieRank[a.characterId] ?? Number.MAX_SAFE_INTEGER;
+                const bRank =
+                    tieRank[b.characterId] ?? Number.MAX_SAFE_INTEGER;
+
+                return aRank - bRank;
+            })
+            .map((combatant,index) => ({
+                characterId:combatant.characterId,
+                initiativeRoll:combatant.initiativeRoll,
+                total:combatant.initiativeTotal,
+                order:index
+            }));
+
+    state.pendingRolls = [];
+    state.phase = "turn";
+    state.round = 1;
+    state.turnIndex = 0;
 
     return {
         success:true,
@@ -107,18 +402,24 @@ function initializeCombat(characters,rng = Math.random){
 
 function beginTurn(state,characters){
 
-    if(!state.active || !state.initiative.length){
+    if(!state || !state.active || state.phase !== "turn" || !state.initiative.length){
         return {
             success:false,
             character:null
         };
     }
 
-    const entry =
-        state.initiative[state.turnIndex];
+    const entry = state.initiative[state.turnIndex];
+
+    if(!entry){
+        return {
+            success:false,
+            character:null
+        };
+    }
 
     const character =
-        characters.find(c => c.id === entry.characterId);
+        characters.find(character => character.id === entry.characterId);
 
     if(!character){
         return {
@@ -138,7 +439,7 @@ function beginTurn(state,characters){
 
 function advanceTurn(state,characters){
 
-    if(!state.active || !state.initiative.length){
+    if(!state || !state.active || state.phase !== "turn" || !state.initiative.length){
         return {
             success:false,
             state:state,
@@ -146,22 +447,17 @@ function advanceTurn(state,characters){
         };
     }
 
-    const currentEntry =
-        state.initiative[state.turnIndex];
-
-    const previousCharacterId =
-        currentEntry.characterId;
+    const currentEntry = state.initiative[state.turnIndex];
+    const previousCharacterId = currentEntry.characterId;
 
     state.turnIndex += 1;
 
     if(state.turnIndex >= state.initiative.length){
-
         state.turnIndex = 0;
         state.round += 1;
     }
 
-    const result =
-        beginTurn(state,characters);
+    const result = beginTurn(state,characters);
 
     if(!result.success){
         return {
@@ -182,14 +478,64 @@ function advanceTurn(state,characters){
 
 function getCurrentTurnCharacter(state,characters){
 
-    if(!state || !state.active || !state.initiative.length){
+    if(!state || !state.active || state.phase !== "turn" || !state.initiative.length){
         return null;
     }
 
-    const entry =
-        state.initiative[state.turnIndex];
+    const entry = state.initiative[state.turnIndex];
 
-    return characters.find(c => c.id === entry.characterId) || null;
+    if(!entry){
+        return null;
+    }
+
+    return characters.find(character => character.id === entry.characterId) || null;
+}
+
+
+function endCombat(state){
+
+    if(!state){
+        return {
+            success:false,
+            state:state
+        };
+    }
+
+    state.active = false;
+    state.phase = "ended";
+    state.pendingRolls = [];
+    state.pendingConfirmation = null;
+    state.pendingReaction = null;
+
+    return {
+        success:true,
+        state:state
+    };
+}
+
+
+function resetTurnResources(character){
+
+    if(!character || !character.movement){
+        return {
+            success:false
+        };
+    }
+
+    character.movement.remaining =
+        character.movement.types.walk;
+
+    character.movement.spent = 0;
+
+    character.turnResources = {
+        actionUsed:false,
+        bonusActionUsed:false,
+        reactionUsed:false
+    };
+
+    return {
+        success:true
+    };
 }
 
 
