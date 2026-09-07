@@ -209,14 +209,15 @@ assert.strictEqual(
 );
 
 const cornerMap = {
-    width: 5,
-    height: 5,
+    width: 3,
+    height: 3,
     rules: {
         feetPerSquare: 5,
         diagonalMovement: "standard"
     },
     tiles: [
-        { x: 3, y: 2, fillsSpace: true }
+        { x: 3, y: 2, fillsSpace: true },
+        { x: 2, y: 3, fillsSpace: true }
     ]
 };
 
