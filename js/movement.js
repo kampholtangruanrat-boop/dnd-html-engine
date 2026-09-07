@@ -1,16 +1,91 @@
+function getMapTile(map,x,y){
+
+    if(!map || !Array.isArray(map.tiles)){
+        return null;
+    }
+
+    return map.tiles.find(tile =>
+        tile.x === x && tile.y === y
+    ) || null;
+}
+
+
+function isDifficultTerrain(map,x,y){
+
+    const tile =
+        getMapTile(map,x,y);
+
+    return Boolean(
+        tile && tile.difficult === true
+    );
+}
+
+
+function getMovementPath(character,x,y){
+
+    const path = [];
+
+    let currentX = character.position.x;
+    let currentY = character.position.y;
+
+    while(currentX !== x || currentY !== y){
+
+        if(currentX < x){
+            currentX += 1;
+        }else if(currentX > x){
+            currentX -= 1;
+        }
+
+        if(currentY < y){
+            currentY += 1;
+        }else if(currentY > y){
+            currentY -= 1;
+        }
+
+        path.push({
+            x:currentX,
+            y:currentY
+        });
+    }
+
+    return path;
+}
+
+
+function getMovementCost(character,x,y,map){
+
+    const path =
+        getMovementPath(character,x,y);
+
+    let cost = 0;
+
+    for(const step of path){
+
+        const squareCost =
+            isDifficultTerrain(map,step.x,step.y)
+                ? 2
+                : 1;
+
+        cost +=
+            squareCost * map.rules.feetPerSquare;
+    }
+
+    return cost;
+}
+
+
 function canMoveTo(character,x,y,map){
+
+    const cost =
+        getMovementCost(
+            character,
+            x,
+            y,
+            map
+        );
 
     const remaining =
         character.movement.remaining;
-
-    const distance =
-        Math.max(
-            Math.abs(character.position.x - x),
-            Math.abs(character.position.y - y)
-        );
-
-    const cost =
-        distance * map.rules.feetPerSquare;
 
     if(cost > remaining){
 
@@ -23,27 +98,16 @@ function canMoveTo(character,x,y,map){
 
         return {
             allowed:false,
-            cost:0
+            cost:0,
+            path:[]
         };
     }
 
     return {
         allowed:true,
-        cost:cost
+        cost:cost,
+        path:getMovementPath(character,x,y)
     };
-}
-
-
-function getMovementCost(character,x,y,map){
-
-    const distance =
-        Math.max(
-            Math.abs(character.position.x - x),
-            Math.abs(character.position.y - y)
-        );
-
-    return distance * map.rules.feetPerSquare;
-
 }
 
 
@@ -81,8 +145,9 @@ function moveCharacter(character,x,y,map){
             y: y
         },
 
-        cost: result.cost
+        cost: result.cost,
 
+        path: result.path
     };
 
     character.position.x = x;
