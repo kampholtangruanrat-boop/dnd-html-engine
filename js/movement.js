@@ -31,6 +31,52 @@ function isDifficultTerrain(map,x,y){
 }
 
 
+function blocksDiagonalCorner(map,x,y){
+
+    const tile =
+        getMapTile(map,x,y);
+
+    return Boolean(
+        tile &&
+        (tile.blocksMovement === true || tile.fillsSpace === true)
+    );
+}
+
+
+function getCreatureFootprint(character,x = character.position.x,y = character.position.y){
+
+    const size =
+        SIZE_ORDER[character.size];
+
+    let side = 1;
+
+    if(character.size === "Large"){
+        side = 2;
+    }else if(character.size === "Huge"){
+        side = 3;
+    }else if(character.size === "Gargantuan"){
+        side = 4;
+    }
+
+    const squares = [];
+
+    for(let offsetY = 0; offsetY < side; offsetY += 1){
+        for(let offsetX = 0; offsetX < side; offsetX += 1){
+            squares.push({
+                x:x + offsetX,
+                y:y + offsetY
+            });
+        }
+    }
+
+    return {
+        side: side,
+        squares: squares,
+        sizeIndex: size
+    };
+}
+
+
 function getMovementPath(character,x,y){
 
     const path = [];
@@ -62,17 +108,58 @@ function getMovementPath(character,x,y){
 }
 
 
+function crossesBlockedCorner(map,fromX,fromY,toX,toY,footprintSide = 1){
+
+    const dx = toX - fromX;
+    const dy = toY - fromY;
+
+    if(Math.abs(dx) !== 1 || Math.abs(dy) !== 1){
+        return false;
+    }
+
+    for(let offsetY = 0; offsetY < footprintSide; offsetY += 1){
+        for(let offsetX = 0; offsetX < footprintSide; offsetX += 1){
+
+            const fromCellX = fromX + offsetX;
+            const fromCellY = fromY + offsetY;
+
+            const firstCornerX = fromCellX + dx;
+            const firstCornerY = fromCellY;
+            const secondCornerX = fromCellX;
+            const secondCornerY = fromCellY + dy;
+
+            if(
+                blocksDiagonalCorner(map,firstCornerX,firstCornerY) ||
+                blocksDiagonalCorner(map,secondCornerX,secondCornerY)
+            ){
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+
 function getOccupantsAt(characters,x,y){
 
     if(!Array.isArray(characters)){
         return [];
     }
 
-    return characters.filter(character =>
-        character.position &&
-        character.position.x === x &&
-        character.position.y === y
-    );
+    return characters.filter(character => {
+
+        if(!character.position){
+            return false;
+        }
+
+        const footprint =
+            getCreatureFootprint(character);
+
+        return footprint.squares.some(square =>
+            square.x === x && square.y === y
+        );
+    });
 }
 
 
@@ -223,20 +310,83 @@ function evaluateSquare(character,x,y,map,characters,isFinal){
 }
 
 
+function evaluateFootprint(character,x,y,map,characters,isFinal){
+
+    const footprint =
+        getCreatureFootprint(character,x,y);
+
+    let totalCost = 0;
+    const occupants = [];
+
+    for(const square of footprint.squares){
+
+        const result =
+            evaluateSquare(
+                character,
+                square.x,
+                square.y,
+                map,
+                characters,
+                isFinal
+            );
+
+        if(!result.allowed){
+            return {
+                allowed:false,
+                cost:0,
+                occupants:result.occupants || occupants
+            };
+        }
+
+        totalCost += result.cost;
+
+        for(const occupant of result.occupants){
+            if(!occupants.some(existing => existing.id === occupant.id)){
+                occupants.push(occupant);
+            }
+        }
+    }
+
+    return {
+        allowed:true,
+        cost:totalCost,
+        occupants:occupants
+    };
+}
+
+
 function getMovementCost(character,x,y,map,characters=[]){
 
     const path =
         getMovementPath(character,x,y);
 
     let cost = 0;
+    let previousX = character.position.x;
+    let previousY = character.position.y;
+
+    const footprintSide =
+        getCreatureFootprint(character).side;
 
     for(let index = 0; index < path.length; index += 1){
 
         const step = path[index];
         const isFinal = index === path.length - 1;
 
+        if(
+            crossesBlockedCorner(
+                map,
+                previousX,
+                previousY,
+                step.x,
+                step.y,
+                footprintSide
+            )
+        ){
+            return Infinity;
+        }
+
         const square =
-            evaluateSquare(
+            evaluateFootprint(
                 character,
                 step.x,
                 step.y,
@@ -250,6 +400,8 @@ function getMovementCost(character,x,y,map,characters=[]){
         }
 
         cost += square.cost;
+        previousX = step.x;
+        previousY = step.y;
     }
 
     return cost;
