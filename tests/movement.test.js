@@ -102,14 +102,44 @@ assert.strictEqual(
 );
 
 assert.ok(
-    mudPath.some(step => step.x !== 3 || step.y !== 2),
-    "Path should avoid the costly mud square when possible"
+    mudPath.every(step => !(step.x === 3 && step.y === 2)),
+    "Path should avoid the costly mud square when an equal-cost route is not required"
 );
 
 const enemy = character("enemy", "Medium", 3, 2, "enemy");
 
+const enemyRoute =
+    context.getMovementPath(
+        medium,
+        5,
+        2,
+        map,
+        [medium, enemy]
+    );
+
+assertValidPath(
+    enemyRoute,
+    medium.position,
+    { x: 5, y: 2 }
+);
+
+assert.ok(enemyRoute.length > 3);
+assert.ok(
+    enemyRoute.every(step => !(step.x === 3 && step.y === 2)),
+    "Path should route around a hostile creature"
+);
+
+const enemyTarget =
+    character("enemy-target", "Medium", 4, 2, "enemy");
+
 assert.strictEqual(
-    context.canMoveTo(medium, 4, 2, map, [medium, enemy]).allowed,
+    context.canMoveTo(
+        medium,
+        4,
+        2,
+        map,
+        [medium, enemyTarget]
+    ).allowed,
     false
 );
 
