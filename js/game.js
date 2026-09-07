@@ -314,7 +314,7 @@ function moveActiveCharacter(x,y){
 
 
     const result =
-        canMoveTo(
+        moveCharacter(
             character,
             x,
             y,
@@ -323,63 +323,16 @@ function moveActiveCharacter(x,y){
 
 
 
-    if(!result.allowed){
+    if(!result.success){
 
         return;
 
     }
 
 
-
-
-    gameState.movementHistory.push({
-
-
-        character:
-        character.id,
-
-
-        from:{
-
-            x:
-            character.position.x,
-
-
-            y:
-            character.position.y
-
-        },
-
-
-        to:{
-
-            x:x,
-
-            y:y
-
-        },
-
-
-        cost:
-        result.cost
-
-
-    });
-
-
-
-
-
-    character.position.x = x;
-
-    character.position.y = y;
-
-
-    character.movement.remaining -= result.cost;
-
-
-    character.movement.spent += result.cost;
-
+    gameState.movementHistory.push(
+        result.transaction
+    );
 
 
     console.log(
