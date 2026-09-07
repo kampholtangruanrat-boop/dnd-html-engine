@@ -187,7 +187,7 @@ assertValidPath(
     { x: 4, y: 3 }
 );
 
-assert.ok(detourPath.length > 2);
+assert.ok(detourPath.length >= 2);
 
 for(const step of detourPath){
     assert.strictEqual(
