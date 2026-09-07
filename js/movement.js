@@ -1,3 +1,13 @@
+const SIZE_ORDER = {
+    Tiny: 0,
+    Small: 1,
+    Medium: 2,
+    Large: 3,
+    Huge: 4,
+    Gargantuan: 5
+};
+
+
 function getMapTile(map,x,y){
 
     if(!map || !Array.isArray(map.tiles)){
@@ -52,45 +62,218 @@ function getMovementPath(character,x,y){
 }
 
 
-function getMovementCost(character,x,y,map){
+function getOccupantsAt(characters,x,y){
+
+    if(!Array.isArray(characters)){
+        return [];
+    }
+
+    return characters.filter(character =>
+        character.position &&
+        character.position.x === x &&
+        character.position.y === y
+    );
+}
+
+
+function isAlly(character,other){
+
+    return Boolean(
+        character &&
+        other &&
+        character.faction !== undefined &&
+        other.faction !== undefined &&
+        character.faction === other.faction
+    );
+}
+
+
+function hasIncapacitatedCondition(character){
+
+    if(!character || !Array.isArray(character.conditions)){
+        return false;
+    }
+
+    return character.conditions.some(condition => {
+
+        if(typeof condition === "string"){
+            return condition === "Incapacitated";
+        }
+
+        return condition &&
+            condition.name === "Incapacitated";
+    });
+}
+
+
+function canPassThroughCreature(character,other){
+
+    if(!character || !other){
+        return false;
+    }
+
+    if(other.id === character.id){
+        return true;
+    }
+
+    if(isAlly(character,other)){
+        return true;
+    }
+
+    if(hasIncapacitatedCondition(other)){
+        return true;
+    }
+
+    if(other.size === "Tiny"){
+        return true;
+    }
+
+    const moverSize = SIZE_ORDER[character.size];
+    const otherSize = SIZE_ORDER[other.size];
+
+    if(moverSize === undefined || otherSize === undefined){
+        return false;
+    }
+
+    return Math.abs(moverSize - otherSize) >= 2;
+}
+
+
+function canEndMoveInCreatureSpace(character,other){
+
+    if(!other || other.id === character.id){
+        return true;
+    }
+
+    return false;
+}
+
+
+function getCreatureMovementCost(character,other,map){
+
+    if(isAlly(character,other) || other.size === "Tiny"){
+        return map.rules.feetPerSquare;
+    }
+
+    return map.rules.feetPerSquare * 2;
+}
+
+
+function evaluateSquare(character,x,y,map,characters,isFinal){
+
+    const occupants =
+        getOccupantsAt(characters,x,y).filter(other =>
+            other.id !== character.id
+        );
+
+    if(occupants.length === 0){
+
+        const terrainCost =
+            isDifficultTerrain(map,x,y)
+                ? map.rules.feetPerSquare * 2
+                : map.rules.feetPerSquare;
+
+        return {
+            allowed:true,
+            cost:terrainCost,
+            occupants:[]
+        };
+    }
+
+    if(isFinal){
+
+        return {
+            allowed:false,
+            cost:0,
+            occupants:occupants
+        };
+    }
+
+    let costMultiplier =
+        isDifficultTerrain(map,x,y) ? 2 : 1;
+
+    for(const occupant of occupants){
+
+        if(!canPassThroughCreature(character,occupant)){
+
+            return {
+                allowed:false,
+                cost:0,
+                occupants:occupants
+            };
+        }
+
+        const creatureCost =
+            getCreatureMovementCost(
+                character,
+                occupant,
+                map
+            );
+
+        if(creatureCost > map.rules.feetPerSquare){
+            costMultiplier = Math.max(costMultiplier,2);
+        }
+    }
+
+    return {
+        allowed:true,
+        cost:map.rules.feetPerSquare * costMultiplier,
+        occupants:occupants
+    };
+}
+
+
+function getMovementCost(character,x,y,map,characters=[]){
 
     const path =
         getMovementPath(character,x,y);
 
     let cost = 0;
 
-    for(const step of path){
+    for(let index = 0; index < path.length; index += 1){
 
-        const squareCost =
-            isDifficultTerrain(map,step.x,step.y)
-                ? 2
-                : 1;
+        const step = path[index];
+        const isFinal = index === path.length - 1;
 
-        cost +=
-            squareCost * map.rules.feetPerSquare;
+        const square =
+            evaluateSquare(
+                character,
+                step.x,
+                step.y,
+                map,
+                characters,
+                isFinal
+            );
+
+        if(!square.allowed){
+            return Infinity;
+        }
+
+        cost += square.cost;
     }
 
     return cost;
 }
 
 
-function canMoveTo(character,x,y,map){
+function canMoveTo(character,x,y,map,characters=[]){
 
     const cost =
         getMovementCost(
             character,
             x,
             y,
-            map
+            map,
+            characters
         );
 
     const remaining =
         character.movement.remaining;
 
-    if(cost > remaining){
+    if(cost === Infinity || cost > remaining){
 
         console.log(
-            "Too far",
+            "Movement blocked or too far",
             cost,
             "/",
             remaining
@@ -111,14 +294,15 @@ function canMoveTo(character,x,y,map){
 }
 
 
-function moveCharacter(character,x,y,map){
+function moveCharacter(character,x,y,map,characters=[]){
 
     const result =
         canMoveTo(
             character,
             x,
             y,
-            map
+            map,
+            characters
         );
 
     if(!result.allowed){
