@@ -45,3 +45,55 @@ function getMovementCost(character,x,y,map){
     return distance * map.rules.feetPerSquare;
 
 }
+
+
+function moveCharacter(character,x,y,map){
+
+    const result =
+        canMoveTo(
+            character,
+            x,
+            y,
+            map
+        );
+
+    if(!result.allowed){
+
+        return {
+            success:false,
+            cost:0,
+            transaction:null
+        };
+
+    }
+
+    const transaction = {
+
+        character: character.id,
+
+        from:{
+            x: character.position.x,
+            y: character.position.y
+        },
+
+        to:{
+            x: x,
+            y: y
+        },
+
+        cost: result.cost
+
+    };
+
+    character.position.x = x;
+    character.position.y = y;
+
+    character.movement.remaining -= result.cost;
+    character.movement.spent += result.cost;
+
+    return {
+        success:true,
+        cost:result.cost,
+        transaction:transaction
+    };
+}
