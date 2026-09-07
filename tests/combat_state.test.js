@@ -1,9 +1,7 @@
 const fs = require("fs");
 const vm = require("vm");
 
-const source =
-    fs.readFileSync("js/turn.js","utf8");
-
+const source = fs.readFileSync("js/turn.js","utf8");
 const context = {};
 vm.createContext(context);
 vm.runInContext(source,context);
@@ -43,27 +41,21 @@ const kenji = makeCharacter("kenji","player",10);
 const mira = makeCharacter("mira","player",16);
 const goblin1 = makeCharacter("goblin_1","enemy",14,"goblins");
 const goblin2 = makeCharacter("goblin_2","enemy",14,"goblins");
-
 const characters = [kenji,mira,goblin1,goblin2];
 
 const created = createCombatState(characters,{combatId:"test-combat"});
-
 assert(created.success,"Combat state should initialize");
 
 const state = created.state;
-
 assert(state.active === true,"Combat should be active");
 assert(state.phase === "initiative_pending","Combat must begin in initiative_pending phase");
 assert(state.round === 0,"Round must remain 0 before initiative is finalized");
 assert(state.turnIndex === -1,"Turn index must remain -1 before initiative is finalized");
 assert(state.pendingRolls.length === 3,"Two players plus one identical-enemy group should create three RollRequests");
 
-const kenjiRequest =
-    state.pendingRolls.find(request => request.actorId === "kenji");
-const miraRequest =
-    state.pendingRolls.find(request => request.actorId === "mira");
-const goblinRequest =
-    state.pendingRolls.find(request => request.actorId === "goblins");
+const kenjiRequest = state.pendingRolls.find(request => request.actorId === "kenji");
+const miraRequest = state.pendingRolls.find(request => request.actorId === "mira");
+const goblinRequest = state.pendingRolls.find(request => request.actorId === "goblins");
 
 assert(kenjiRequest.source === "player","Player initiative must request a player-supplied roll");
 assert(miraRequest.source === "player","Player initiative must request a player-supplied roll");
@@ -83,11 +75,18 @@ assert(result.allRollsResolved === true,"All initiative rolls should now be reso
 assert(state.phase === "initiative_pending","Resolving rolls alone must not commit turn order");
 
 result = buildInitiativeOrder(state);
-assert(result.success,"Initiative should finalize when there are no ties");
+assert(result.success === false,"Initiative ties must block finalization until explicitly ordered");
+assert(result.status === "needs_tiebreak","Tie must report needs_tiebreak status");
+
+result = buildInitiativeOrder(state,{
+    "12":["kenji","goblin_1","goblin_2"]
+});
+assert(result.success,"Initiative should finalize after the tie is explicitly ordered");
 assert(state.phase === "turn","Combat should enter turn phase after initiative is finalized");
 assert(state.round === 1,"Combat should start at round 1");
 assert(state.turnIndex === 0,"First turn index should be 0");
 assert(state.initiative[0].characterId === "mira","Highest initiative should act first");
+assert(state.initiative[1].characterId === "kenji","Mixed player/monster tie should use the explicit DM order");
 
 const current = beginTurn(state,characters);
 assert(current.success && current.character.id === "mira","beginTurn should resolve the current combatant");
@@ -102,7 +101,7 @@ assert(result.previousCharacterId === "mira","Advance should report the previous
 assert(state.turnIndex === 1,"Turn index should advance");
 
 result = advanceTurn(state,characters);
-assert(result.success,"Turn should advance to the grouped enemy entries");
+assert(result.success,"Turn should advance to the enemy group entries");
 assert(state.turnIndex === 2,"Turn index should advance again");
 
 result = advanceTurn(state,characters);
