@@ -87,6 +87,7 @@ assert(state.round === 1,"Combat should start at round 1");
 assert(state.turnIndex === 0,"First turn index should be 0");
 assert(state.initiative[0].characterId === "mira","Highest initiative should act first");
 assert(state.initiative[1].characterId === "kenji","Mixed player/monster tie should use the explicit DM order");
+assert(state.initiative.length === 4,"Every monster still has its own turn even when an identical group shares one Initiative roll");
 
 const current = beginTurn(state,characters);
 assert(current.success && current.character.id === "mira","beginTurn should resolve the current combatant");
@@ -96,16 +97,20 @@ assert(mira.turnResources.reactionUsed === false,"Reaction should reset at turn 
 
 mira.turnResources.actionUsed = true;
 result = advanceTurn(state,characters);
-assert(result.success,"Turn should advance");
+assert(result.success,"Turn should advance to the tied player");
 assert(result.previousCharacterId === "mira","Advance should report the previous combatant");
-assert(state.turnIndex === 1,"Turn index should advance");
+assert(state.turnIndex === 1,"Turn index should advance to the next combatant");
 
 result = advanceTurn(state,characters);
-assert(result.success,"Turn should advance to the enemy group entries");
-assert(state.turnIndex === 2,"Turn index should advance again");
+assert(result.success,"Turn should advance to the first member of the enemy group");
+assert(state.turnIndex === 2,"Turn index should advance to the next initiative entry");
 
 result = advanceTurn(state,characters);
-assert(result.success,"Turn should advance to the next round");
+assert(result.success,"Turn should advance to the second member of the enemy group");
+assert(state.turnIndex === 3,"Each group member must retain its own turn");
+
+result = advanceTurn(state,characters);
+assert(result.success,"Turn should advance to the next round after every initiative entry has acted");
 assert(state.turnIndex === 0,"Turn index should wrap to 0");
 assert(state.round === 2,"Round should increment after the final initiative entry");
 
