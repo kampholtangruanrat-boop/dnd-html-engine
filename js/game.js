@@ -6,7 +6,7 @@ let gameState = {
 
     activeCharacter: null,
 
-    movementHistory: []
+    movementHistory: {}
 
 };
 
@@ -67,6 +67,7 @@ async function loadGame() {
 
 
 function renderParty(){
+
 
     const partyArea =
         document.getElementById("party");
@@ -330,7 +331,14 @@ function moveActiveCharacter(x,y){
     }
 
 
-    gameState.movementHistory.push(
+    if(!gameState.movementHistory[character.id]){
+
+        gameState.movementHistory[character.id] = [];
+
+    }
+
+
+    gameState.movementHistory[character.id].push(
         result.transaction
     );
 
@@ -364,14 +372,24 @@ function moveActiveCharacter(x,y){
 function undoMove(){
 
 
+    if(!gameState.activeCharacter){
 
-    const lastMove =
+        console.log("No active character");
 
-        gameState.movementHistory.pop();
+        return;
+
+    }
 
 
+    const character =
+        gameState.activeCharacter;
 
-    if(!lastMove){
+
+    const history =
+        gameState.movementHistory[character.id];
+
+
+    if(!history || history.length === 0){
 
 
         console.log(
@@ -384,59 +402,25 @@ function undoMove(){
     }
 
 
+    const lastMove =
+        history[history.length - 1];
 
 
-
-    const character =
-
-        gameState.party.find(
-
-            c =>
-            c.id === lastMove.character
-
+    const result =
+        undoMovement(
+            character,
+            lastMove
         );
 
 
-
-
-
-    if(!character){
+    if(!result.success){
 
         return;
 
     }
 
 
-
-
-
-
-    character.position.x =
-
-        lastMove.from.x;
-
-
-
-    character.position.y =
-
-        lastMove.from.y;
-
-
-
-
-
-    character.movement.remaining +=
-
-        lastMove.cost;
-
-
-
-    character.movement.spent -=
-
-        lastMove.cost;
-
-
-
+    history.pop();
 
 
     console.log(
@@ -449,12 +433,9 @@ function undoMove(){
 
 
 
-
-
     renderMap();
 
     renderActiveCharacter();
-
 
 
 }
