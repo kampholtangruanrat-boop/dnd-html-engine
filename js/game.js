@@ -18,58 +18,40 @@ let gameState = {
 };
 
 
-
-
-
 async function loadGame() {
 
     console.log("Game loading");
 
-
     const characterResponse =
         await fetch("data/characters.json");
 
-
     gameState.party =
         await characterResponse.json();
-
 
     console.log(
         "Characters loaded",
         gameState.party
     );
 
-
-
     const mapResponse =
         await fetch("data/map.json");
 
-
     gameState.map =
         await mapResponse.json();
-
 
     console.log(
         "Map loaded",
         gameState.map
     );
 
-
-
     gameState.activeCharacter =
         gameState.party[0];
-
-
 
     renderParty();
     renderTurnOrder();
     renderActiveCharacter();
     renderMap();
-
 }
-
-
-
 
 
 function renderParty(){
@@ -82,36 +64,19 @@ function renderParty(){
     gameState.party.forEach(character => {
 
         partyArea.innerHTML += `
-
         <div>
-
         <h3>${character.name}</h3>
-
-        Class:
-        ${character.class}<br>
-
-        HP:
-        ${character.hp}/${character.max_hp}<br>
-
-        AC:
-        ${character.ac}
-
-        <br>
-
+        Class: ${character.class}<br>
+        HP: ${character.hp}/${character.max_hp}<br>
+        AC: ${character.ac}<br>
         <button onclick="setActiveCharacter('${character.id}')">
         Select
         </button>
-
         </div>
-
         <hr>
-
         `;
     });
 }
-
-
-
 
 
 function setActiveCharacter(id){
@@ -132,11 +97,9 @@ function setActiveCharacter(id){
             );
 
         if(!currentCharacter || currentCharacter.id !== id){
-
             console.log(
                 "Cannot select another character during combat"
             );
-
             return;
         }
     }
@@ -146,9 +109,6 @@ function setActiveCharacter(id){
     renderActiveCharacter();
     renderMap();
 }
-
-
-
 
 
 function renderTurnOrder(){
@@ -193,24 +153,15 @@ function renderTurnOrder(){
         }).join("");
 
     area.innerHTML = `
-
     Round: ${gameState.turn.round}
-
     <br><br>
-
     ${rows}
-
     <br>
-
     <button onclick="endCurrentTurn()">
     End Turn
     </button>
-
     `;
 }
-
-
-
 
 
 function renderActiveCharacter(){
@@ -234,51 +185,24 @@ function renderActiveCharacter(){
         };
 
     area.innerHTML = `
-
-    <h2>
-    Active Character
-    </h2>
-
+    <h2>Active Character</h2>
     <h3>${c.name}</h3>
-
-    Class:
-    ${c.class}<br>
-
-    HP:
-    ${c.hp}/${c.max_hp}<br>
-
-    AC:
-    ${c.ac}<br>
-
-    Movement:
-    ${c.movement.remaining}/${c.movement.types.walk}
-
+    Class: ${c.class}<br>
+    HP: ${c.hp}/${c.max_hp}<br>
+    AC: ${c.ac}<br>
+    Movement: ${c.movement.remaining}/${c.movement.types.walk}
     <br>
-
-    Action:
-    ${resources.actionUsed ? "Used" : "Available"}
-
+    Action: ${resources.actionUsed ? "Used" : "Available"}
     <br>
-
-    Bonus Action:
-    ${resources.bonusActionUsed ? "Used" : "Available"}
-
+    Bonus Action: ${resources.bonusActionUsed ? "Used" : "Available"}
     <br>
-
-    Reaction:
-    ${resources.reactionUsed ? "Used" : "Available"}
-
+    Reaction: ${resources.reactionUsed ? "Used" : "Available"}
     <br><br>
-
     <button onclick="undoMove()">
     Undo Movement
     </button>
-
     `;
 }
-
-
-
 
 
 function renderMap(){
@@ -327,9 +251,6 @@ function renderMap(){
 }
 
 
-
-
-
 function moveActiveCharacter(x,y){
 
     if(!gameState.activeCharacter){
@@ -359,7 +280,8 @@ function moveActiveCharacter(x,y){
             character,
             x,
             y,
-            gameState.map
+            gameState.map,
+            gameState.party
         );
 
     if(!result.success){
@@ -386,9 +308,6 @@ function moveActiveCharacter(x,y){
     renderMap();
     renderActiveCharacter();
 }
-
-
-
 
 
 function undoMove(){
@@ -431,9 +350,6 @@ function undoMove(){
 }
 
 
-
-
-
 function startCombat(){
 
     if(gameState.turn.active){
@@ -462,9 +378,6 @@ function startCombat(){
     renderActiveCharacter();
     renderMap();
 }
-
-
-
 
 
 function endCurrentTurn(){
@@ -500,7 +413,6 @@ function endCurrentTurn(){
     renderActiveCharacter();
     renderMap();
 }
-
 
 
 loadGame();
