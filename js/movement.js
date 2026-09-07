@@ -19,6 +19,11 @@ function isInsideMap(map,x,y){
     );
 }
 
+function isBlockedTile(map,x,y){
+    const tile = getMapTile(map,x,y);
+    return Boolean(tile && tile.blocksMovement === true);
+}
+
 function isDifficultTerrain(map,x,y){
     const tile = getMapTile(map,x,y);
     return Boolean(tile && tile.difficult === true);
@@ -43,11 +48,7 @@ function getCreatureFootprint(character,x = character.position.x,y = character.p
         }
     }
 
-    return {
-        side,
-        squares,
-        sizeIndex:SIZE_ORDER[character.size]
-    };
+    return {side,squares,sizeIndex:SIZE_ORDER[character.size]};
 }
 
 function isFootprintInsideMap(map,character,x,y){
@@ -107,7 +108,7 @@ function getCreatureMovementCost(character,other,map){
 }
 
 function evaluateSquare(character,x,y,map,characters,isFinal){
-    if(!isInsideMap(map,x,y)){
+    if(!isInsideMap(map,x,y) || isBlockedTile(map,x,y)){
         return {allowed:false,cost:0,occupants:[]};
     }
 
