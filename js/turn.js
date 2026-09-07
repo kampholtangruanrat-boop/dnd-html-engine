@@ -47,7 +47,7 @@ function resetTurnResources(character){
 }
 
 
-function startCombat(characters,rng = Math.random){
+function initializeCombat(characters,rng = Math.random){
 
     if(!characters || characters.length === 0){
 
@@ -88,7 +88,15 @@ function startCombat(characters,rng = Math.random){
         initiative:initiative
     };
 
-    beginTurn(state,characters);
+    const result =
+        beginTurn(state,characters);
+
+    if(!result.success){
+        return {
+            success:false,
+            state:null
+        };
+    }
 
     return {
         success:true,
@@ -101,7 +109,8 @@ function beginTurn(state,characters){
 
     if(!state.active || !state.initiative.length){
         return {
-            success:false
+            success:false,
+            character:null
         };
     }
 
@@ -113,7 +122,8 @@ function beginTurn(state,characters){
 
     if(!character){
         return {
-            success:false
+            success:false,
+            character:null
         };
     }
 
@@ -126,28 +136,21 @@ function beginTurn(state,characters){
 }
 
 
-function endTurn(state,characters){
+function advanceTurn(state,characters){
 
     if(!state.active || !state.initiative.length){
         return {
-            success:false
+            success:false,
+            state:state,
+            previousCharacterId:null
         };
     }
 
     const currentEntry =
         state.initiative[state.turnIndex];
 
-    const currentCharacter =
-        characters.find(c => c.id === currentEntry.characterId);
-
-    if(currentCharacter){
-        resetMovement(currentCharacter);
-        currentCharacter.turnResources = {
-            actionUsed:false,
-            bonusActionUsed:false,
-            reactionUsed:false
-        };
-    }
+    const previousCharacterId =
+        currentEntry.characterId;
 
     state.turnIndex += 1;
 
@@ -157,7 +160,23 @@ function endTurn(state,characters){
         state.round += 1;
     }
 
-    return beginTurn(state,characters);
+    const result =
+        beginTurn(state,characters);
+
+    if(!result.success){
+        return {
+            success:false,
+            state:state,
+            previousCharacterId:previousCharacterId
+        };
+    }
+
+    return {
+        success:true,
+        state:state,
+        previousCharacterId:previousCharacterId,
+        character:result.character
+    };
 }
 
 
