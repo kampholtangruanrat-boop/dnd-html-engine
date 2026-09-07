@@ -87,9 +87,23 @@ map.tiles.push({
     difficult: true
 });
 
+const mudPath =
+    context.getMovementPath(medium, 4, 2, map, [medium]);
+
+assertValidPath(
+    mudPath,
+    medium.position,
+    { x: 4, y: 2 }
+);
+
 assert.strictEqual(
     context.getMovementCost(medium, 4, 2, map, [medium]),
-    15
+    10
+);
+
+assert.ok(
+    mudPath.some(step => step.x !== 3 || step.y !== 2),
+    "Path should avoid the costly mud square when possible"
 );
 
 const enemy = character("enemy", "Medium", 3, 2, "enemy");
