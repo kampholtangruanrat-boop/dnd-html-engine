@@ -197,6 +197,13 @@ function renderActiveCharacter(){
     </button>
 
 
+    <button onclick="resetTurn()">
+
+    Reset Turn
+
+    </button>
+
+
     `;
 
 
@@ -441,6 +448,54 @@ function undoMove(){
 }
 
 
+
+
+
+function resetTurn(){
+
+
+    if(!gameState.activeCharacter){
+
+        console.log("No active character");
+
+        return;
+
+    }
+
+
+    const character =
+        gameState.activeCharacter;
+
+
+    const result =
+        resetMovement(character);
+
+
+    if(!result.success){
+
+        return;
+
+    }
+
+
+    delete gameState.movementHistory[character.id];
+
+
+    console.log(
+
+        "Turn reset",
+
+        character.name
+
+    );
+
+
+    renderMap();
+
+    renderActiveCharacter();
+
+
+}
 
 
 
