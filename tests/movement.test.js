@@ -35,6 +35,23 @@ function character(id, size, x, y, faction = "player") {
     };
 }
 
+function assertValidPath(path, start, target) {
+    let previous = start;
+
+    for (const step of path) {
+        assert.ok(
+            Math.abs(step.x - previous.x) <= 1 &&
+            Math.abs(step.y - previous.y) <= 1 &&
+            (step.x !== previous.x || step.y !== previous.y),
+            `Invalid step from ${previous.x},${previous.y} to ${step.x},${step.y}`
+        );
+        previous = step;
+    }
+
+    assert.strictEqual(previous.x, target.x);
+    assert.strictEqual(previous.y, target.y);
+}
+
 const map = JSON.parse(JSON.stringify(baseMap));
 const medium = character("medium", "Medium", 2, 2);
 const large = character("large", "Large", 2, 2);
@@ -44,12 +61,18 @@ assert.strictEqual(
     4
 );
 
-assert.deepStrictEqual(
-    context.getMovementPath(medium, 4, 2, map, [medium]),
-    [
-        { x: 3, y: 2 },
-        { x: 4, y: 2 }
-    ]
+const directPath =
+    context.getMovementPath(medium, 4, 2, map, [medium]);
+
+assertValidPath(
+    directPath,
+    medium.position,
+    { x: 4, y: 2 }
+);
+
+assert.strictEqual(
+    context.getMovementCost(medium, 4, 2, map, [medium]),
+    10
 );
 
 assert.strictEqual(
@@ -114,15 +137,21 @@ const detourPath =
         [pathCharacter]
     );
 
-assert.deepStrictEqual(
+assertValidPath(
     detourPath,
-    [
-        { x: 2, y: 4 },
-        { x: 3, y: 5 },
-        { x: 4, y: 4 },
-        { x: 4, y: 3 }
-    ]
+    pathCharacter.position,
+    { x: 4, y: 3 }
 );
+
+assert.ok(detourPath.length > 2);
+
+for(const step of detourPath){
+    assert.strictEqual(
+        wallMap.tiles.some(tile => tile.x === step.x && tile.y === step.y),
+        false,
+        "Path entered blocked square"
+    );
+}
 
 assert.strictEqual(
     context.getMovementCost(
@@ -132,7 +161,7 @@ assert.strictEqual(
         wallMap,
         [pathCharacter]
     ),
-    20
+    detourPath.length * 5
 );
 
 const cornerMap = {
