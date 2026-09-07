@@ -97,3 +97,54 @@ function moveCharacter(character,x,y,map){
         transaction:transaction
     };
 }
+
+
+function undoMovement(character,transaction){
+
+    if(!transaction){
+
+        return {
+            success:false,
+            cost:0
+        };
+
+    }
+
+    if(transaction.character !== character.id){
+
+        return {
+            success:false,
+            cost:0
+        };
+
+    }
+
+    if(
+        character.position.x !== transaction.to.x ||
+        character.position.y !== transaction.to.y
+    ){
+
+        return {
+            success:false,
+            cost:0
+        };
+
+    }
+
+    character.position.x =
+        transaction.from.x;
+
+    character.position.y =
+        transaction.from.y;
+
+    character.movement.remaining +=
+        transaction.cost;
+
+    character.movement.spent -=
+        transaction.cost;
+
+    return {
+        success:true,
+        cost:transaction.cost
+    };
+}
