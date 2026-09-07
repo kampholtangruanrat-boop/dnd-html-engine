@@ -6,7 +6,14 @@ let gameState = {
 
     activeCharacter: null,
 
-    movementHistory: {}
+    movementHistory: {},
+
+    turn: {
+        active:false,
+        round:0,
+        turnIndex:-1,
+        initiative:[]
+    }
 
 };
 
@@ -55,9 +62,8 @@ async function loadGame() {
 
 
     renderParty();
-
+    renderTurnOrder();
     renderActiveCharacter();
-
     renderMap();
 
 }
@@ -68,17 +74,12 @@ async function loadGame() {
 
 function renderParty(){
 
-
     const partyArea =
         document.getElementById("party");
 
-
     partyArea.innerHTML = "";
 
-
-
     gameState.party.forEach(character => {
-
 
         partyArea.innerHTML += `
 
@@ -97,23 +98,16 @@ function renderParty(){
 
         <br>
 
-
         <button onclick="setActiveCharacter('${character.id}')">
-
         Select
-
         </button>
-
 
         </div>
 
         <hr>
 
         `;
-
-
     });
-
 }
 
 
@@ -122,27 +116,97 @@ function renderParty(){
 
 function setActiveCharacter(id){
 
-
     const character =
-        gameState.party.find(
-            c => c.id === id
-        );
+        gameState.party.find(c => c.id === id);
 
-
-
-    if(character){
-
-
-        gameState.activeCharacter =
-            character;
-
-
-        renderActiveCharacter();
-
-        renderMap();
-
+    if(!character){
+        return;
     }
 
+    if(gameState.turn.active){
+
+        const currentCharacter =
+            getCurrentTurnCharacter(
+                gameState.turn,
+                gameState.party
+            );
+
+        if(!currentCharacter || currentCharacter.id !== id){
+
+            console.log(
+                "Cannot select another character during combat"
+            );
+
+            return;
+        }
+    }
+
+    gameState.activeCharacter = character;
+
+    renderActiveCharacter();
+    renderMap();
+}
+
+
+
+
+
+function renderTurnOrder(){
+
+    const area =
+        document.getElementById("turn-order");
+
+    if(!area){
+        return;
+    }
+
+    if(!gameState.turn.active){
+
+        area.innerHTML = `
+        Combat: Not started
+        <br><br>
+        <button onclick="startCombat()">
+        Start Combat
+        </button>
+        `;
+
+        return;
+    }
+
+    const rows =
+        gameState.turn.initiative.map((entry,index) => {
+
+            const character =
+                gameState.party.find(c => c.id === entry.characterId);
+
+            const marker =
+                index === gameState.turn.turnIndex
+                    ? " <- Current"
+                    : "";
+
+            return `
+                <div>
+                ${character ? character.name : entry.characterId}
+                : Initiative ${entry.total}${marker}
+                </div>
+            `;
+        }).join("");
+
+    area.innerHTML = `
+
+    Round: ${gameState.turn.round}
+
+    <br><br>
+
+    ${rows}
+
+    <br>
+
+    <button onclick="endCurrentTurn()">
+    End Turn
+    </button>
+
+    `;
 }
 
 
@@ -151,15 +215,23 @@ function setActiveCharacter(id){
 
 function renderActiveCharacter(){
 
-
     const area =
         document.getElementById("active");
-
 
     const c =
         gameState.activeCharacter;
 
+    if(!c){
+        area.innerHTML = "No active character";
+        return;
+    }
 
+    const resources =
+        c.turnResources || {
+            actionUsed:false,
+            bonusActionUsed:false,
+            reactionUsed:false
+        };
 
     area.innerHTML = `
 
@@ -167,46 +239,42 @@ function renderActiveCharacter(){
     Active Character
     </h2>
 
-
     <h3>${c.name}</h3>
-
 
     Class:
     ${c.class}<br>
 
-
     HP:
     ${c.hp}/${c.max_hp}<br>
-
 
     AC:
     ${c.ac}<br>
 
-
     Movement:
     ${c.movement.remaining}/${c.movement.types.walk}
 
+    <br>
+
+    Action:
+    ${resources.actionUsed ? "Used" : "Available"}
+
+    <br>
+
+    Bonus Action:
+    ${resources.bonusActionUsed ? "Used" : "Available"}
+
+    <br>
+
+    Reaction:
+    ${resources.reactionUsed ? "Used" : "Available"}
 
     <br><br>
 
-
     <button onclick="undoMove()">
-
     Undo Movement
-
     </button>
-
-
-    <button onclick="resetTurn()">
-
-    Reset Turn
-
-    </button>
-
 
     `;
-
-
 }
 
 
@@ -215,25 +283,16 @@ function renderActiveCharacter(){
 
 function renderMap(){
 
-
     const map =
         document.getElementById("map");
 
-
     map.innerHTML = "";
-
-
 
     for(let y=1; y<=gameState.map.height; y++){
 
-
         for(let x=1; x<=gameState.map.width; x++){
 
-
-
             let token = "";
-
-
 
             const character =
                 gameState.party.find(
@@ -242,60 +301,29 @@ function renderMap(){
                     c.position.y === y
                 );
 
-
-
-
             if(character){
 
-
                 token = `
-
-
-                <button 
+                <button
                 onclick="
                 event.stopPropagation();
                 setActiveCharacter('${character.id}')
                 ">
-
-
                 ${character.name[0]}
-
-
                 </button>
-
-
                 `;
-
             }
 
-
-
-
-
             map.innerHTML += `
-
-
             <div
-
             class="tile"
-
             onclick="moveActiveCharacter(${x},${y})"
-
             >
-
             ${token}
-
             </div>
-
-
             `;
-
-
         }
-
     }
-
-
 }
 
 
@@ -304,22 +332,27 @@ function renderMap(){
 
 function moveActiveCharacter(x,y){
 
-
-
     if(!gameState.activeCharacter){
-
         console.log("No active character");
-
         return;
-
     }
 
+    if(gameState.turn.active){
 
+        const currentCharacter =
+            getCurrentTurnCharacter(
+                gameState.turn,
+                gameState.party
+            );
+
+        if(!currentCharacter || currentCharacter.id !== gameState.activeCharacter.id){
+            console.log("Not this character's turn");
+            return;
+        }
+    }
 
     const character =
         gameState.activeCharacter;
-
-
 
     const result =
         moveCharacter(
@@ -329,47 +362,29 @@ function moveActiveCharacter(x,y){
             gameState.map
         );
 
-
-
     if(!result.success){
-
         return;
-
     }
-
 
     if(!gameState.movementHistory[character.id]){
-
         gameState.movementHistory[character.id] = [];
-
     }
-
 
     gameState.movementHistory[character.id].push(
         result.transaction
     );
 
-
     console.log(
-
         "Moved",
         character.name,
-
         "Cost:",
         result.cost,
-
         "Remaining:",
         character.movement.remaining
-
     );
 
-
-
     renderMap();
-
     renderActiveCharacter();
-
-
 }
 
 
@@ -378,40 +393,24 @@ function moveActiveCharacter(x,y){
 
 function undoMove(){
 
-
     if(!gameState.activeCharacter){
-
         console.log("No active character");
-
         return;
-
     }
-
 
     const character =
         gameState.activeCharacter;
 
-
     const history =
         gameState.movementHistory[character.id];
 
-
     if(!history || history.length === 0){
-
-
-        console.log(
-            "No movement to undo"
-        );
-
-
+        console.log("No movement to undo");
         return;
-
     }
-
 
     const lastMove =
         history[history.length - 1];
-
 
     const result =
         undoMovement(
@@ -419,85 +418,88 @@ function undoMove(){
             lastMove
         );
 
-
     if(!result.success){
-
         return;
-
     }
-
 
     history.pop();
 
-
-    console.log(
-
-        "Undo",
-
-        character.name
-
-    );
-
-
+    console.log("Undo", character.name);
 
     renderMap();
-
     renderActiveCharacter();
-
-
 }
 
 
 
 
 
-function resetTurn(){
+function startCombat(){
 
-
-    if(!gameState.activeCharacter){
-
-        console.log("No active character");
-
+    if(gameState.turn.active){
         return;
-
     }
-
-
-    const character =
-        gameState.activeCharacter;
-
 
     const result =
-        resetMovement(character);
-
+        initializeCombat(
+            gameState.party
+        );
 
     if(!result.success){
-
         return;
-
     }
 
+    gameState.turn = result.state;
 
-    delete gameState.movementHistory[character.id];
+    gameState.activeCharacter =
+        getCurrentTurnCharacter(
+            gameState.turn,
+            gameState.party
+        );
 
-
-    console.log(
-
-        "Turn reset",
-
-        character.name
-
-    );
-
-
-    renderMap();
-
+    renderParty();
+    renderTurnOrder();
     renderActiveCharacter();
-
-
+    renderMap();
 }
 
 
+
+
+
+function endCurrentTurn(){
+
+    if(!gameState.turn.active){
+        return;
+    }
+
+    const result =
+        advanceTurn(
+            gameState.turn,
+            gameState.party
+        );
+
+    if(!result.success){
+        return;
+    }
+
+    if(result.previousCharacterId){
+        delete gameState.movementHistory[result.previousCharacterId];
+    }
+
+    gameState.turn = result.state;
+
+    gameState.activeCharacter =
+        getCurrentTurnCharacter(
+            gameState.turn,
+            gameState.party
+        );
+
+    renderParty();
+    renderTurnOrder();
+    renderActiveCharacter();
+    renderMap();
+}
 
 
 
