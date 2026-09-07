@@ -10,7 +10,7 @@ const source = fs.readFileSync(
 const context = {};
 vm.runInNewContext(source, context);
 
-const map = {
+const baseMap = {
     width: 8,
     height: 8,
     rules: {
@@ -35,12 +35,21 @@ function character(id, size, x, y, faction = "player") {
     };
 }
 
+const map = JSON.parse(JSON.stringify(baseMap));
 const medium = character("medium", "Medium", 2, 2);
 const large = character("large", "Large", 2, 2);
 
 assert.strictEqual(
     context.getCreatureFootprint(large).squares.length,
     4
+);
+
+assert.deepStrictEqual(
+    context.getMovementPath(medium, 4, 2, map, [medium]),
+    [
+        { x: 3, y: 2 },
+        { x: 4, y: 2 }
+    ]
 );
 
 assert.strictEqual(
@@ -77,6 +86,53 @@ assert.strictEqual(
 assert.strictEqual(
     context.canMoveTo(medium, 3, 2, map, [medium, ally]).allowed,
     false
+);
+
+const wallMap = {
+    width: 6,
+    height: 6,
+    rules: {
+        feetPerSquare: 5,
+        diagonalMovement: "standard"
+    },
+    tiles: [
+        { x: 3, y: 2, blocksMovement: true },
+        { x: 3, y: 3, blocksMovement: true },
+        { x: 3, y: 4, blocksMovement: true }
+    ]
+};
+
+const pathCharacter =
+    character("path", "Medium", 2, 3);
+
+const detourPath =
+    context.getMovementPath(
+        pathCharacter,
+        4,
+        3,
+        wallMap,
+        [pathCharacter]
+    );
+
+assert.deepStrictEqual(
+    detourPath,
+    [
+        { x: 2, y: 4 },
+        { x: 3, y: 5 },
+        { x: 4, y: 4 },
+        { x: 4, y: 3 }
+    ]
+);
+
+assert.strictEqual(
+    context.getMovementCost(
+        pathCharacter,
+        4,
+        3,
+        wallMap,
+        [pathCharacter]
+    ),
+    20
 );
 
 const cornerMap = {
@@ -124,4 +180,4 @@ assert.strictEqual(
     false
 );
 
-console.log("Movement footprint/corner tests: PASS");
+console.log("Movement pathfinding tests: PASS");
