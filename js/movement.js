@@ -21,7 +21,10 @@ function isInsideMap(map,x,y){
 
 function isBlockedTile(map,x,y){
     const tile = getMapTile(map,x,y);
-    return Boolean(tile && tile.blocksMovement === true);
+    return Boolean(
+        tile &&
+        (tile.blocksMovement === true || tile.fillsSpace === true)
+    );
 }
 
 function isDifficultTerrain(map,x,y){
@@ -30,9 +33,7 @@ function isDifficultTerrain(map,x,y){
 }
 
 function blocksDiagonalCorner(map,x,y){
-    if(!isInsideMap(map,x,y)) return true;
-    const tile = getMapTile(map,x,y);
-    return Boolean(tile && (tile.blocksMovement === true || tile.fillsSpace === true));
+    return isBlockedTile(map,x,y);
 }
 
 function getCreatureFootprint(character,x = character.position.x,y = character.position.y){
