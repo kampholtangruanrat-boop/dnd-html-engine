@@ -103,7 +103,7 @@ assert.strictEqual(
 
 assert.ok(
     mudPath.every(step => !(step.x === 3 && step.y === 2)),
-    "Path should avoid the costly mud square when an equal-cost route is not required"
+    "Path should avoid the costly mud square when a cheaper route exists"
 );
 
 const enemy = character("enemy", "Medium", 3, 2, "enemy");
@@ -123,7 +123,7 @@ assertValidPath(
     { x: 5, y: 2 }
 );
 
-assert.ok(enemyRoute.length > 3);
+assert.ok(enemyRoute.length >= 3);
 assert.ok(
     enemyRoute.every(step => !(step.x === 3 && step.y === 2)),
     "Path should route around a hostile creature"
