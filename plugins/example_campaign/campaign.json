@@ -1,0 +1,53 @@
+{
+  "apiVersion": "1",
+  "id": "example_campaign",
+  "name": "Example Campaign",
+  "version": "1.0.0",
+  "maps": {
+    "example_tactical": {
+      "id": "example_tactical",
+      "mode": "tactical",
+      "visual": {
+        "image": "maps/example_tactical.webp",
+        "grid": {
+          "width": 20,
+          "height": 15,
+          "squareFeet": 5,
+          "origin": {
+            "x": 0,
+            "y": 0
+          },
+          "pixelSize": 64
+        }
+      },
+      "logical": {
+        "terrain": {
+          "4,3": {
+            "type": "mud",
+            "difficult": true
+          },
+          "4,4": {
+            "type": "mud",
+            "difficult": true
+          }
+        },
+        "obstacles": {
+          "8,5": {
+            "id": "wall_01",
+            "type": "stone_wall",
+            "blocksMovement": true,
+            "blocksLineOfSight": true
+          }
+        },
+        "cover": {
+          "7,5": {
+            "type": "half"
+          }
+        },
+        "elevation": {},
+        "regions": {}
+      }
+    }
+  },
+  "encounters": {}
+}
