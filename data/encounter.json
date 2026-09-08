@@ -1,0 +1,83 @@
+{
+  "name": "Two Goblins",
+  "enemies": [
+    {
+      "id": "goblin_1",
+      "name": "Goblin 1",
+      "class": "Goblin",
+      "level": 1,
+      "hp": 7,
+      "max_hp": 7,
+      "ac": 15,
+      "size": "Small",
+      "faction": "enemy",
+      "control": "enemy",
+      "initiativeGroupId": "goblins",
+      "abilities": {
+        "str": 8,
+        "dex": 14,
+        "con": 10,
+        "int": 10,
+        "wis": 8,
+        "cha": 8
+      },
+      "movement": {
+        "remaining": 30,
+        "spent": 0,
+        "types": {
+          "walk": 30,
+          "climb": 0,
+          "swim": 0,
+          "fly": 0
+        }
+      },
+      "conditions": [],
+      "resistances": [],
+      "vulnerabilities": [],
+      "immunities": [],
+      "position": {
+        "x": 2,
+        "y": 3
+      }
+    },
+    {
+      "id": "goblin_2",
+      "name": "Goblin 2",
+      "class": "Goblin",
+      "level": 1,
+      "hp": 7,
+      "max_hp": 7,
+      "ac": 15,
+      "size": "Small",
+      "faction": "enemy",
+      "control": "enemy",
+      "initiativeGroupId": "goblins",
+      "abilities": {
+        "str": 8,
+        "dex": 14,
+        "con": 10,
+        "int": 10,
+        "wis": 8,
+        "cha": 8
+      },
+      "movement": {
+        "remaining": 30,
+        "spent": 0,
+        "types": {
+          "walk": 30,
+          "climb": 0,
+          "swim": 0,
+          "fly": 0
+        }
+      },
+      "conditions": [],
+      "resistances": [],
+      "vulnerabilities": [],
+      "immunities": [],
+      "position": {
+        "x": 5,
+        "y": 3
+      }
+    }
+  ]
+}
