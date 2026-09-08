@@ -3,16 +3,12 @@
     "id": "kenji",
     "name": "Kenji",
     "class": "Fighter",
-
     "level": 1,
-
     "hp": 14,
     "max_hp": 14,
     "ac": 16,
-
     "size": "Medium",
     "faction": "player",
-
     "abilities": {
       "str": 16,
       "dex": 10,
@@ -21,11 +17,9 @@
       "wis": 12,
       "cha": 8
     },
-
     "movement": {
       "remaining": 30,
-       "spent":0,
-
+      "spent": 0,
       "types": {
         "walk": 30,
         "climb": 0,
@@ -33,30 +27,38 @@
         "fly": 0
       }
     },
-
     "conditions": [],
-
     "position": {
       "x": 2,
       "y": 2
-    }
+    },
+    "attacks": [
+      {
+        "actionId": "kenji-longsword",
+        "name": "Longsword",
+        "attackMode": "melee",
+        "reachFeet": 5,
+        "attackBonus": 5,
+        "rollMode": "normal",
+        "damageDice": {
+          "count": 1,
+          "sides": 8
+        },
+        "damageBonus": 3,
+        "damageType": "slashing"
+      }
+    ]
   },
-
-
   {
     "id": "mira",
     "name": "Mira",
     "class": "Ranger",
-
     "level": 1,
-
     "hp": 16,
     "max_hp": 16,
     "ac": 13,
-
     "size": "Medium",
     "faction": "player",
-
     "abilities": {
       "str": 10,
       "dex": 16,
@@ -65,11 +67,9 @@
       "wis": 14,
       "cha": 10
     },
-
     "movement": {
       "remaining": 30,
-       "spent":0,
-
+      "spent": 0,
       "types": {
         "walk": 30,
         "climb": 0,
@@ -77,12 +77,27 @@
         "fly": 0
       }
     },
-
     "conditions": [],
-
     "position": {
       "x": 3,
       "y": 2
-    }
+    },
+    "attacks": [
+      {
+        "actionId": "mira-longbow",
+        "name": "Longbow",
+        "attackMode": "ranged",
+        "normalRangeFeet": 150,
+        "longRangeFeet": 600,
+        "attackBonus": 5,
+        "rollMode": "normal",
+        "damageDice": {
+          "count": 1,
+          "sides": 8
+        },
+        "damageBonus": 3,
+        "damageType": "piercing"
+      }
+    ]
   }
 ]
