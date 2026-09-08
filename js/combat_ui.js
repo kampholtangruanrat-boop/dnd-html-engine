@@ -3,11 +3,10 @@ function getCurrentPlayerCharacter(){
         return null;
     }
 
-    const current =
-        getCurrentTurnCharacter(
-            gameState.turn,
-            gameState.party
-        );
+    const current = getCurrentTurnCharacter(
+        gameState.turn,
+        gameState.party
+    );
 
     if(!current || current.faction !== "player"){
         return null;
@@ -21,10 +20,11 @@ function getHostileTargets(character){
         return [];
     }
 
-    return gameState.party.filter(target =>
+    return getAllCombatants().filter(target =>
         target.id !== character.id
         && target.faction !== undefined
         && target.faction !== character.faction
+        && Number(target.hp) > 0
     );
 }
 
@@ -131,10 +131,7 @@ function beginAttackFromUI(){
     const intentResult = createConfirmedAttackIntent(
         actor,
         targetSelect.value,
-        {
-            ...attack,
-            rollMode:modeSelect.value
-        }
+        {...attack,rollMode:modeSelect.value}
     );
 
     if(!intentResult.success){
@@ -142,9 +139,11 @@ function beginAttackFromUI(){
         return;
     }
 
+    const combatants = getAllCombatants();
+
     const plan = createActionResolutionPlan(
         gameState.turn,
-        gameState.party,
+        combatants,
         intentResult.intent
     );
 
@@ -155,7 +154,7 @@ function beginAttackFromUI(){
 
     const attackRequest = createAttackRollRequest(
         gameState.turn,
-        gameState.party,
+        combatants,
         gameState.map,
         intentResult.intent
     );
@@ -167,7 +166,7 @@ function beginAttackFromUI(){
 
     const committed = commitActionResolution(
         gameState.turn,
-        gameState.party,
+        combatants,
         intentResult.intent,
         plan.plan
     );
@@ -243,7 +242,7 @@ function submitAttackFromUI(rollId,targetAC,attackBonus,targetId){
     }
 
     const actor = getCurrentPlayerCharacter();
-    const target = gameState.party.find(character => character.id === targetId);
+    const target = getAllCombatants().find(character => character.id === targetId);
     const attack = actor && Array.isArray(actor.attacks) ? actor.attacks[0] : null;
 
     if(!actor || !target || !attack){
@@ -285,7 +284,7 @@ function submitAttackFromUI(rollId,targetAC,attackBonus,targetId){
 function submitDamageFromUI(rollId,targetId,damageBonus,damageType){
     const area = document.getElementById("combat-actions");
     const request = getPendingRoll(gameState.turn,rollId);
-    const target = gameState.party.find(character => character.id === targetId);
+    const target = getAllCombatants().find(character => character.id === targetId);
     const input = document.getElementById("damage-roll-results");
 
     if(!area || !request || !target || !input){
@@ -322,6 +321,7 @@ function submitDamageFromUI(rollId,targetId,damageBonus,damageType){
 
     renderParty();
     renderActiveCharacter();
+    renderMap();
 
     area.innerHTML = `
         <strong>Damage Applied</strong><br><br>
