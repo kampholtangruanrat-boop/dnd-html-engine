@@ -50,18 +50,18 @@ function getInitiativeGroupId(character){
 }
 
 
-function createRollRequestId(state, index){
+function createRollRequestId(state,index){
 
     return `initiative-${state.combatId}-${index + 1}`;
 }
 
 
-function createInitiativeRollRequests(state, characters){
+function createInitiativeRollRequests(state,characters){
 
     const requests = [];
     const groupedEnemyRequests = {};
 
-    characters.forEach((character,index) => {
+    characters.forEach(character => {
 
         const control = getCombatantControl(character);
         const groupId = getInitiativeGroupId(character);
@@ -72,32 +72,38 @@ function createInitiativeRollRequests(state, characters){
                 return;
             }
 
-            const request = {
+            const created = createRollRequest({
                 rollId:createRollRequestId(state,requests.length),
-                type:"initiative",
                 actorId:groupId,
                 control:"enemy",
+                type:"initiative",
                 dice:{count:1,sides:20},
                 mode:"normal",
-                source:"python_rng",
-                status:"pending"
-            };
+                source:"python_rng"
+            });
 
-            groupedEnemyRequests[groupId] = request.rollId;
-            requests.push(request);
+            if(!created.success){
+                return;
+            }
+
+            groupedEnemyRequests[groupId] = created.request.rollId;
+            requests.push(created.request);
             return;
         }
 
-        requests.push({
+        const created = createRollRequest({
             rollId:createRollRequestId(state,requests.length),
-            type:"initiative",
             actorId:character.id,
             control:control,
+            type:"initiative",
             dice:{count:1,sides:20},
             mode:"normal",
-            source:control === "player" ? "player" : "python_rng",
-            status:"pending"
+            source:control === "player" ? "player" : "python_rng"
         });
+
+        if(created.success){
+            requests.push(created.request);
+        }
     });
 
     state.pendingRolls = requests;
@@ -105,7 +111,7 @@ function createInitiativeRollRequests(state, characters){
 }
 
 
-function createCombatState(characters, options = {}){
+function createCombatState(characters,options = {}){
 
     if(!Array.isArray(characters) || characters.length === 0){
         return {
@@ -148,7 +154,7 @@ function createCombatState(characters, options = {}){
 }
 
 
-function initializeCombat(characters, options = {}){
+function initializeCombat(characters,options = {}){
 
     return createCombatState(characters,options);
 }
@@ -164,56 +170,41 @@ function getPendingRoll(state,rollId){
 }
 
 
-function validateD20Result(result){
+function resolveInitiativeRoll(request,result){
 
-    return Number.isInteger(result) && result >= 1 && result <= 20;
-}
-
-
-function resolveInitiativeRoll(request, results){
-
-    if(!request || !Array.isArray(results)){
+    if(!request || request.type !== "initiative" || !result){
         return {
             success:false,
-            reason:"Invalid roll request or results"
+            reason:"Invalid initiative RollRequest or RollResult"
         };
     }
 
-    const requiredCount = request.dice.count;
-
-    if(results.length !== requiredCount){
+    if(!Array.isArray(result.results) || result.results.length !== request.dice.count){
         return {
             success:false,
             reason:"Incorrect number of dice results"
         };
     }
 
-    if(!results.every(validateD20Result)){
-        return {
-            success:false,
-            reason:"Initiative results must be integers from 1 to 20"
-        };
-    }
-
-    let selected = results[0];
+    let selected = result.results[0];
 
     if(request.mode === "advantage"){
-        selected = Math.max(...results);
+        selected = Math.max(...result.results);
     }
 
     if(request.mode === "disadvantage"){
-        selected = Math.min(...results);
+        selected = Math.min(...result.results);
     }
 
     return {
         success:true,
         selected:selected,
-        results:[...results]
+        results:[...result.results]
     };
 }
 
 
-function submitInitiativeRoll(state, rollId, results, characters){
+function submitInitiativeRoll(state,rollId,rollResult,characters){
 
     if(!state || state.phase !== "initiative_pending"){
         return {
@@ -233,13 +224,31 @@ function submitInitiativeRoll(state, rollId, results, characters){
         };
     }
 
-    const roll = resolveInitiativeRoll(request,results);
-
-    if(!roll.success){
+    if(request.type !== "initiative"){
         return {
             success:false,
             state:state,
-            reason:roll.reason
+            reason:"RollRequest is not an initiative request"
+        };
+    }
+
+    const submission = submitRollResult(state,rollResult);
+
+    if(!submission.success){
+        return {
+            success:false,
+            state:state,
+            reason:submission.reason
+        };
+    }
+
+    const resolved = resolveInitiativeRoll(request,rollResult);
+
+    if(!resolved.success){
+        return {
+            success:false,
+            state:state,
+            reason:resolved.reason
         };
     }
 
@@ -253,6 +262,8 @@ function submitInitiativeRoll(state, rollId, results, characters){
     });
 
     if(combatants.length === 0){
+        request.status = "pending";
+        delete request.results;
         return {
             success:false,
             state:state,
@@ -261,20 +272,16 @@ function submitInitiativeRoll(state, rollId, results, characters){
     }
 
     combatants.forEach(combatant => {
-        combatant.initiativeRoll = roll.selected;
+        combatant.initiativeRoll = resolved.selected;
         combatant.initiativeTotal =
-            roll.selected + combatant.initiativeModifier;
+            resolved.selected + combatant.initiativeModifier;
     });
-
-    request.status = "resolved";
-    request.results = roll.results;
-    request.selected = roll.selected;
 
     return {
         success:true,
         state:state,
-        allRollsResolved:state.pendingRolls.every(item => item.status === "resolved"),
-        result:roll
+        allRollsResolved:submission.allRollsResolved,
+        result:resolved
     };
 }
 
@@ -305,7 +312,7 @@ function getInitiativeTieGroups(state){
 }
 
 
-function validateTieBreakerOrder(group, orderIds){
+function validateTieBreakerOrder(group,orderIds){
 
     if(!Array.isArray(orderIds) || orderIds.length !== group.combatants.length){
         return false;
@@ -321,7 +328,7 @@ function validateTieBreakerOrder(group, orderIds){
 }
 
 
-function buildInitiativeOrder(state, tieBreakers = {}){
+function buildInitiativeOrder(state,tieBreakers = {},characters = null){
 
     if(!state || state.phase !== "initiative_pending"){
         return {
@@ -331,7 +338,7 @@ function buildInitiativeOrder(state, tieBreakers = {}){
         };
     }
 
-    if(state.pendingRolls.some(request => request.status !== "resolved")){
+    if(!state.pendingRolls.length || state.pendingRolls.some(request => request.status !== "resolved")){
         return {
             success:false,
             state:state,
@@ -393,10 +400,29 @@ function buildInitiativeOrder(state, tieBreakers = {}){
     state.round = 1;
     state.turnIndex = 0;
 
+    const turnStart = characters ? beginTurn(state,characters) : {
+        success:true
+    };
+
+    if(!turnStart.success){
+        return {
+            success:false,
+            state:state,
+            reason:"Initiative finalized but the first turn could not be started"
+        };
+    }
+
     return {
         success:true,
-        state:state
+        state:state,
+        character:turnStart.character || null
     };
+}
+
+
+function finalizeInitiative(state,characters,tieBreakers = {}){
+
+    return buildInitiativeOrder(state,tieBreakers,characters);
 }
 
 
