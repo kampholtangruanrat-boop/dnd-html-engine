@@ -10,9 +10,11 @@ let gameState = {
 
     turn: {
         active:false,
+        phase:"idle",
         round:0,
         turnIndex:-1,
-        initiative:[]
+        initiative:[],
+        pendingRolls:[]
     }
 
 };
@@ -51,6 +53,7 @@ async function loadGame() {
     renderTurnOrder();
     renderActiveCharacter();
     renderMap();
+    renderCombatActions();
 }
 
 
@@ -108,6 +111,7 @@ function setActiveCharacter(id){
 
     renderActiveCharacter();
     renderMap();
+    renderCombatActions();
 }
 
 
@@ -130,6 +134,10 @@ function renderTurnOrder(){
         </button>
         `;
 
+        return;
+    }
+
+    if(gameState.turn.phase === "initiative_pending"){
         return;
     }
 
@@ -307,6 +315,7 @@ function moveActiveCharacter(x,y){
 
     renderMap();
     renderActiveCharacter();
+    renderCombatActions();
 }
 
 
@@ -347,6 +356,7 @@ function undoMove(){
 
     renderMap();
     renderActiveCharacter();
+    renderCombatActions();
 }
 
 
@@ -377,6 +387,7 @@ function startCombat(){
     renderTurnOrder();
     renderActiveCharacter();
     renderMap();
+    renderCombatActions();
 }
 
 
@@ -412,6 +423,7 @@ function endCurrentTurn(){
     renderTurnOrder();
     renderActiveCharacter();
     renderMap();
+    renderCombatActions();
 }
 
 
