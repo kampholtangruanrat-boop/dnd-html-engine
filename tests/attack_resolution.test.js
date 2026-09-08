@@ -45,10 +45,14 @@ const map = {width:10,height:10,rules:{feetPerSquare:5},tiles:[]};
 const combat = createCombatState(characters,{combatId:"attack-test"});
 assert(combat.success,"Combat state should initialize");
 for(const request of combat.state.pendingRolls){
+    const initiativeFace =
+        request.actorId === "kenji" ? 15 :
+        request.actorId === "goblins" ? 10 : 5;
+
     const result = {
         rollId:request.rollId,
         source:request.source,
-        results:[10]
+        results:[initiativeFace]
     };
     const submitted = context.submitInitiativeRoll(
         combat.state,request.rollId,result,characters
@@ -58,13 +62,13 @@ for(const request of combat.state.pendingRolls){
 
 const initiative = finalizeInitiative(combat.state,characters);
 assert(initiative.success,"Non-tied initiative should finalize");
-assert(combat.state.initiative[0].characterId === "far_goblin" || combat.state.initiative.length === 3,"Combat should enter turn phase");
+assert(combat.state.initiative.length === 3,"Combat should contain three initiative entries");
 
 // Reorder test fixture so Kenji is the active actor.
 combat.state.initiative = [
-    {characterId:"kenji",initiativeRoll:10,total:10,order:0},
-    {characterId:"goblin",initiativeRoll:9,total:9,order:1},
-    {characterId:"far_goblin",initiativeRoll:8,total:8,order:2}
+    {characterId:"kenji",initiativeRoll:15,total:15,order:0},
+    {characterId:"goblin",initiativeRoll:10,total:10,order:1},
+    {characterId:"far_goblin",initiativeRoll:5,total:5,order:2}
 ];
 combat.state.turnIndex = 0;
 context.resetTurnResources(kenji);
@@ -88,8 +92,8 @@ assert(planned.success,"Action should produce a resolution plan");
 const committed = commitActionResolution(combat.state,characters,confirmedIntent,planned.plan);
 assert(committed.success,"Action resource should be consumed before the attack proceeds");
 
-// Use a separate turn state for attack request tests because the action resource
-// above is now intentionally consumed.
+// Use Bonus Action/Reaction resources for attack fixtures so this remains a
+// foundation test rather than testing Action resource policy twice.
 const requestIntentResult = createIntent({
     intentId:"intent-attack-request",
     actorId:"kenji",
@@ -184,14 +188,15 @@ const outOfReachIntent = createIntent({
 const outOfReachRequest = createAttackRollRequest(combat.state,characters,map,{...outOfReachIntent.intent,status:"confirmed"});
 assert(outOfReachRequest.success === false,"Target outside melee reach must be rejected");
 
-// Ranged attacks beyond normal range are legal but require the attack to be made
-// with disadvantage by the caller/next resolution layer.
+// Ranged attacks beyond normal range are legal within long range. The
+// disadvantage rule is intentionally reserved for the next modifiers slice.
 const rangedIntent = createIntent({
     intentId:"intent-ranged",
     actorId:"kenji",
     type:"reaction",
     payload:{
         actionId:"ranged_attack",
+        attackMode:"ranged",
         attack:{
             targetId:"far_goblin",
             attackMode:"ranged",
