@@ -200,7 +200,7 @@ function resolveAttackRoll(request,rollResult,targetAC,attackBonus){
     const natural20 = selected === 20;
     const natural1 = selected === 1;
     let outcome = "miss";
-    let total = selected + attackBonus;
+    const total = selected + attackBonus;
 
     if(natural20){
         outcome = "hit";
@@ -228,14 +228,19 @@ function submitAttackRoll(state,request,rollResult,targetAC,attackBonus){
         return {success:false,state:state,reason:"Attack state and request are required"};
     }
 
-    const submission = submitRollResult(state,rollResult);
-    if(!submission.success){
-        return {success:false,state:state,reason:submission.reason};
+    const validation = validateRollResult(request,rollResult);
+    if(!validation.valid){
+        return {success:false,state:state,reason:validation.reason};
     }
 
     const resolved = resolveAttackRoll(request,rollResult,targetAC,attackBonus);
     if(!resolved.success){
         return {success:false,state:state,reason:resolved.reason};
+    }
+
+    const submission = submitRollResult(state,rollResult);
+    if(!submission.success){
+        return {success:false,state:state,reason:submission.reason};
     }
 
     return {
