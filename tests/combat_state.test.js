@@ -1,10 +1,10 @@
 const fs = require("fs");
 const vm = require("vm");
 
-const source = fs.readFileSync("js/turn.js","utf8");
 const context = {};
 vm.createContext(context);
-vm.runInContext(source,context);
+vm.runInContext(fs.readFileSync("js/dice.js","utf8"),context);
+vm.runInContext(fs.readFileSync("js/turn.js","utf8"),context);
 
 const {
     createCombatState,
@@ -37,6 +37,14 @@ function makeCharacter(id,faction,dex,initiativeGroupId = null){
     };
 }
 
+function makeRollResult(request,results){
+    return {
+        rollId:request.rollId,
+        source:request.source,
+        results:results
+    };
+}
+
 const kenji = makeCharacter("kenji","player",10);
 const mira = makeCharacter("mira","player",16);
 const goblin1 = makeCharacter("goblin_1","enemy",14,"goblins");
@@ -62,14 +70,14 @@ assert(miraRequest.source === "player","Player initiative must request a player-
 assert(goblinRequest.source === "python_rng","Enemy initiative must request Python RNG");
 assert(goblinRequest.dice.count === 1 && goblinRequest.dice.sides === 20,"Initiative RollRequest must be 1d20");
 
-let result = submitInitiativeRoll(state,kenjiRequest.rollId,[12],characters);
+let result = submitInitiativeRoll(state,kenjiRequest.rollId,makeRollResult(kenjiRequest,[12]),characters);
 assert(result.success,"Kenji initiative result should be accepted");
 assert(state.phase === "initiative_pending","State must not advance before all initiative results are resolved");
 
-result = submitInitiativeRoll(state,miraRequest.rollId,[16],characters);
+result = submitInitiativeRoll(state,miraRequest.rollId,makeRollResult(miraRequest,[16]),characters);
 assert(result.success,"Mira initiative result should be accepted");
 
-result = submitInitiativeRoll(state,goblinRequest.rollId,[10],characters);
+result = submitInitiativeRoll(state,goblinRequest.rollId,makeRollResult(goblinRequest,[10]),characters);
 assert(result.success,"Goblin initiative result should be accepted");
 assert(result.allRollsResolved === true,"All initiative rolls should now be resolved");
 assert(state.phase === "initiative_pending","Resolving rolls alone must not commit turn order");
@@ -80,7 +88,7 @@ assert(result.status === "needs_tiebreak","Tie must report needs_tiebreak status
 
 result = buildInitiativeOrder(state,{
     "12":["kenji","goblin_1","goblin_2"]
-});
+},characters);
 assert(result.success,"Initiative should finalize after the tie is explicitly ordered");
 assert(state.phase === "turn","Combat should enter turn phase after initiative is finalized");
 assert(state.round === 1,"Combat should start at round 1");
