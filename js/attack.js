@@ -250,3 +250,113 @@ function submitAttackRoll(state,request,rollResult,targetAC,attackBonus){
         allRollsResolved:submission.allRollsResolved
     };
 }
+
+
+function createDamageRollForAttack(state,attackRequest,attackResolution,damageSpec){
+
+    if(!state || !attackRequest || !attackResolution || !damageSpec){
+        return {success:false,request:null,reason:"Attack damage integration requires state, attack resolution, and damage specification"};
+    }
+
+    if(attackRequest.type !== "attack" || attackRequest.status !== "resolved"){
+        return {success:false,request:null,reason:"Attack RollRequest must be a resolved attack request"};
+    }
+
+    if(!attackResolution.success || attackResolution.outcome !== "hit"){
+        return {success:false,request:null,reason:"Damage can only be created for a successful hit"};
+    }
+
+    if(typeof damageSpec.targetId !== "string" || damageSpec.targetId.length === 0){
+        return {success:false,request:null,reason:"Damage requires targetId"};
+    }
+
+    if(damageSpec.actorId !== undefined && damageSpec.actorId !== attackRequest.actorId){
+        return {success:false,request:null,reason:"Damage actor must match attack actor"};
+    }
+
+    if(!damageSpec.dice || !Number.isInteger(damageSpec.dice.count) || damageSpec.dice.count <= 0
+        || !Number.isInteger(damageSpec.dice.sides) || damageSpec.dice.sides < 2){
+        return {success:false,request:null,reason:"Damage requires valid dice"};
+    }
+
+    if(!Number.isInteger(damageSpec.damageBonus)){
+        return {success:false,request:null,reason:"Damage requires an integer damage bonus"};
+    }
+
+    if(typeof damageSpec.damageType !== "string" || damageSpec.damageType.trim().length === 0){
+        return {success:false,request:null,reason:"Damage requires a damage type"};
+    }
+
+    const rollId =
+        `damage-${state.combatId}-${state.eventSequence + state.pendingRolls.length + 1}`;
+
+    const created = createDamageRollRequest({
+        rollId:rollId,
+        actorId:attackRequest.actorId,
+        control:attackRequest.control,
+        dice:damageSpec.dice,
+        source:attackRequest.source,
+        critical:Boolean(attackResolution.critical)
+    });
+
+    if(!created.success){
+        return {success:false,request:null,reason:created.reason};
+    }
+
+    state.pendingRolls.push(created.request);
+
+    return {
+        success:true,
+        request:created.request,
+        targetId:damageSpec.targetId,
+        damageBonus:damageSpec.damageBonus,
+        damageType:damageSpec.damageType
+    };
+}
+
+
+function submitDamageRollForAttack(state,damageRequest,rollResult,target,damageBonus,damageType){
+
+    if(!state || !damageRequest || !target){
+        return {success:false,state:state,reason:"Damage submission requires state, request, and target"};
+    }
+
+    if(damageRequest.type !== "damage"){
+        return {success:false,state:state,reason:"RollRequest is not a damage request"};
+    }
+
+    const validation = validateRollResult(damageRequest,rollResult);
+    if(!validation.valid){
+        return {success:false,state:state,reason:validation.reason};
+    }
+
+    const resolved = resolveDamageRoll(
+        damageRequest,
+        rollResult,
+        damageBonus,
+        target,
+        damageType
+    );
+
+    if(!resolved.success){
+        return {success:false,state:state,reason:resolved.reason};
+    }
+
+    const submission = submitRollResult(state,rollResult);
+    if(!submission.success){
+        return {success:false,state:state,reason:submission.reason};
+    }
+
+    const committed = commitDamage(target,resolved);
+    if(!committed.success){
+        return {success:false,state:state,reason:committed.reason};
+    }
+
+    return {
+        success:true,
+        state:state,
+        damage:resolved,
+        commit:committed,
+        allRollsResolved:submission.allRollsResolved
+    };
+}
