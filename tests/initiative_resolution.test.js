@@ -139,10 +139,10 @@ const tieState = tieStateCreated.state;
 const tieRequests = tieState.pendingRolls;
 for(const request of tieRequests){
     const roll = request.actorId === "kenji"
-        ? 9
+        ? 10
         : request.actorId === "mira"
             ? 12
-            : 10;
+            : 8;
     const response = submitInitiativeRoll(tieState,request.rollId,{
         rollId:request.rollId,
         source:request.source,
@@ -160,28 +160,31 @@ let tieFinal = finalizeInitiative(tieState);
 assert(tieFinal.success === false,"Tie must block initiative finalization without explicit order");
 assert(tieFinal.status === "needs_tiebreak","Tie must report needs_tiebreak");
 
-tieFinal = finalizeInitiative(tieState,characters,validTieOrder);
+tieFinal = finalizeInitiative(tieState,characters,{
+    "10":["kenji","goblin_1","goblin_2"]
+});
 assert(tieFinal.success,"Valid explicit tie-break should finalize initiative");
 assert(tieState.phase === "turn","Combat should enter turn phase after finalization");
 assert(tieState.round === 1,"Round should begin at 1");
 assert(tieState.turnIndex === 0,"Turn index should begin at 0");
 assert(tieState.initiative.length === 4,"Grouped enemies must still have separate initiative entries");
-assert(tieState.initiative[0].characterId === "kenji","Tie-break order should control the tied entries");
-assert(tieFinal.character && tieFinal.character.id === "kenji","Finalization should begin the first turn");
-assert(characters[0].turnResources.actionUsed === false,"First turn should reset Action");
-assert(characters[0].turnResources.bonusActionUsed === false,"First turn should reset Bonus Action");
-assert(characters[0].turnResources.reactionUsed === false,"First turn should reset Reaction");
+assert(tieState.initiative[0].characterId === "mira","Highest initiative should act first");
+assert(tieState.initiative[1].characterId === "kenji","Tie-break order should control the tied entries");
+assert(tieFinal.character && tieFinal.character.id === "mira","Finalization should begin the first turn");
+assert(characters[1].turnResources.actionUsed === false,"First turn should reset Action");
+assert(characters[1].turnResources.bonusActionUsed === false,"First turn should reset Bonus Action");
+assert(characters[1].turnResources.reactionUsed === false,"First turn should reset Reaction");
 
 const invalidTieOrder = {
-    "12":["kenji","kenji","goblin_1"]
+    "10":["kenji","kenji","goblin_1"]
 };
 const anotherTie = createCombatState(characters,{combatId:"invalid-tie"});
 for(const request of anotherTie.state.pendingRolls){
     const roll = request.actorId === "kenji"
-        ? 9
+        ? 10
         : request.actorId === "mira"
             ? 12
-            : 10;
+            : 8;
     submitInitiativeRoll(anotherTie.state,request.rollId,{
         rollId:request.rollId,
         source:request.source,
