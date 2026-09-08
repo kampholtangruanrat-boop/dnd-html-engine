@@ -1,0 +1,7 @@
+{
+  "apiVersion": "1",
+  "id": "example_campaign",
+  "name": "Example Campaign",
+  "version": "1.0.0",
+  "entry": "campaign.json"
+}
