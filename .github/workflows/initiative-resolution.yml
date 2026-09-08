@@ -1,0 +1,25 @@
+name: Initiative Resolution
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  initiative-resolution:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Run initiative resolution tests
+        run: node tests/initiative_resolution.test.js
+
+      - name: Run combat state regression tests
+        run: node tests/combat_state.test.js
