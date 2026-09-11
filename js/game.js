@@ -75,7 +75,7 @@ function setActiveCharacter(id){
     if(gameState.turn.active){
         const currentCharacter = getCurrentTurnCharacter(
             gameState.turn,
-            getAllCombatants()
+            gameState.party
         );
 
         if(!currentCharacter || currentCharacter.id !== id){
@@ -200,7 +200,7 @@ function moveActiveCharacter(x,y){
     if(gameState.turn.active){
         const currentCharacter = getCurrentTurnCharacter(
             gameState.turn,
-            getAllCombatants()
+            gameState.party
         );
 
         if(!currentCharacter || currentCharacter.id !== gameState.activeCharacter.id){
@@ -273,7 +273,9 @@ function startCombat(){
         return;
     }
 
-    const result = initializeCombat(getAllCombatants());
+    // Enemy encounter data is visible to targeting, but enemy Initiative
+    // remains disabled until the Python RNG boundary is implemented.
+    const result = initializeCombat(gameState.party);
     if(!result.success){
         return;
     }
@@ -282,7 +284,7 @@ function startCombat(){
     gameState.selectedTargetId = null;
     gameState.activeCharacter = getCurrentTurnCharacter(
         gameState.turn,
-        getAllCombatants()
+        gameState.party
     );
 
     renderParty();
@@ -297,7 +299,7 @@ function endCurrentTurn(){
         return;
     }
 
-    const result = advanceTurn(gameState.turn,getAllCombatants());
+    const result = advanceTurn(gameState.turn,gameState.party);
     if(!result.success){
         return;
     }
@@ -310,7 +312,7 @@ function endCurrentTurn(){
     gameState.selectedTargetId = null;
     gameState.activeCharacter = getCurrentTurnCharacter(
         gameState.turn,
-        getAllCombatants()
+        gameState.party
     );
 
     renderParty();
