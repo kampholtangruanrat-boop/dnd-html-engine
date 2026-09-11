@@ -5,7 +5,7 @@ function getCurrentPlayerCharacter(){
 
     const current = getCurrentTurnCharacter(
         gameState.turn,
-        gameState.party
+        getAllCombatants()
     );
 
     if(!current || current.faction !== "player"){
@@ -26,6 +26,22 @@ function getHostileTargets(character){
         && target.faction !== character.faction
         && Number(target.hp) > 0
     );
+}
+
+function selectCombatTarget(targetId){
+    const actor = getCurrentPlayerCharacter();
+    if(!actor){
+        return;
+    }
+
+    const target = getHostileTargets(actor).find(candidate => candidate.id === targetId);
+    if(!target){
+        return;
+    }
+
+    gameState.selectedTargetId = target.id;
+    renderMap();
+    renderCombatActions();
 }
 
 function createConfirmedAttackIntent(actor,targetId,attackSpec){
@@ -59,6 +75,15 @@ function createConfirmedAttackIntent(actor,targetId,attackSpec){
     };
 }
 
+function getSelectedTargetId(targets){
+    const selected = gameState.selectedTargetId;
+    if(selected && targets.some(target => target.id === selected)){
+        return selected;
+    }
+
+    return targets.length > 0 ? targets[0].id : null;
+}
+
 function openAttackUI(){
     const area = document.getElementById("combat-actions");
     const actor = getCurrentPlayerCharacter();
@@ -88,16 +113,20 @@ function openAttackUI(){
     }
 
     const attack = attacks[0];
+    const selectedTargetId = getSelectedTargetId(targets);
+    gameState.selectedTargetId = selectedTargetId;
+
     const targetOptions = targets.map(target =>
-        `<option value="${target.id}">${target.name} (AC ${target.ac})</option>`
+        `<option value="${target.id}" ${target.id === selectedTargetId ? "selected" : ""}>${target.name} (AC ${target.ac})</option>`
     ).join("");
 
     area.innerHTML = `
         <strong>Actions — ${actor.name}</strong><br><br>
         <label>
             Attack target:
-            <select id="attack-target">${targetOptions}</select>
-        </label><br><br>
+            <select id="attack-target" onchange="selectCombatTarget(this.value)">${targetOptions}</select>
+        </label><br>
+        <small>Tip: click an enemy token on the map to select it as the target.</small><br><br>
         <label>
             Roll mode:
             <select id="attack-roll-mode">
@@ -107,6 +136,20 @@ function openAttackUI(){
             </select>
         </label><br><br>
         <button onclick="beginAttackFromUI()">Attack with ${attack.name}</button>
+        <button onclick="endCurrentTurn()">End Turn</button>
+    `;
+}
+
+function renderCombatError(title,message){
+    const area = document.getElementById("combat-actions");
+    if(!area){
+        return;
+    }
+
+    area.innerHTML = `
+        <strong>${title}</strong><br><br>
+        ${message}<br><br>
+        <button onclick="renderCombatActions()">Retry</button>
         <button onclick="endCurrentTurn()">End Turn</button>
     `;
 }
@@ -125,8 +168,11 @@ function beginAttackFromUI(){
     const modeSelect = document.getElementById("attack-roll-mode");
 
     if(!attack || !targetSelect || !modeSelect){
+        renderCombatError("Attack unavailable","Attack selection is no longer valid. Refresh the action panel.");
         return;
     }
+
+    gameState.selectedTargetId = targetSelect.value;
 
     const intentResult = createConfirmedAttackIntent(
         actor,
@@ -135,7 +181,7 @@ function beginAttackFromUI(){
     );
 
     if(!intentResult.success){
-        area.innerHTML = `Attack rejected: ${intentResult.reason || "Unknown error"}`;
+        renderCombatError("Attack rejected",intentResult.reason || "Unknown error");
         return;
     }
 
@@ -148,7 +194,7 @@ function beginAttackFromUI(){
     );
 
     if(!plan.success){
-        area.innerHTML = `Attack action rejected: ${plan.reason}`;
+        renderCombatError("Attack action rejected",plan.reason);
         return;
     }
 
@@ -160,7 +206,7 @@ function beginAttackFromUI(){
     );
 
     if(!attackRequest.success){
-        area.innerHTML = `Attack rejected: ${attackRequest.reason}`;
+        renderCombatError("Attack rejected",attackRequest.reason);
         return;
     }
 
@@ -172,7 +218,7 @@ function beginAttackFromUI(){
     );
 
     if(!committed.success){
-        area.innerHTML = `Action commit rejected: ${committed.reason}`;
+        renderCombatError("Action commit rejected",committed.reason);
         return;
     }
 
@@ -186,13 +232,29 @@ function renderAttackRollRequest(attackRequest){
         return;
     }
 
+    const count = attackRequest.request.dice.count;
+    const inputExample = count === 1 ? "e.g. 17" : "e.g. 17,4 or 17 4";
+
     area.innerHTML = `
         <strong>Attack Roll</strong><br><br>
-        ${attackRequest.request.dice.count}d${attackRequest.request.dice.sides} — ${attackRequest.request.mode}<br>
-        Enter the physical die result${attackRequest.request.dice.count > 1 ? "s" : ""}.<br><br>
-        <input id="attack-roll-results" type="text" placeholder="e.g. 17 or 17,4">
+        ${count}d${attackRequest.request.dice.sides} — ${attackRequest.request.mode}<br>
+        ${count === 1 ? "Enter the physical d20 result." : "Enter both physical d20 results. The engine will keep the higher/lower result."}<br><br>
+        <input id="attack-roll-results" type="text" placeholder="${inputExample}">
         <button onclick="submitAttackFromUI('${attackRequest.request.rollId}',${attackRequest.targetAC},${attackRequest.attackBonus},'${attackRequest.targetId}')">Submit Attack Roll</button>
     `;
+}
+
+function parseRollResultsInput(value){
+    if(typeof value !== "string"){
+        return [];
+    }
+
+    return value
+        .trim()
+        .split(/[\s,]+/)
+        .filter(Boolean)
+        .map(value => Number(value))
+        .filter(value => Number.isInteger(value));
 }
 
 function submitAttackFromUI(rollId,targetAC,attackBonus,targetId){
@@ -201,16 +263,17 @@ function submitAttackFromUI(rollId,targetAC,attackBonus,targetId){
     const input = document.getElementById("attack-roll-results");
 
     if(!area || !request || !input){
+        renderCombatError("Attack roll unavailable","The attack RollRequest is no longer pending. Return to the action panel and start a new attack.");
         return;
     }
 
-    const results = input.value
-        .split(",")
-        .map(value => Number(value.trim()))
-        .filter(value => Number.isInteger(value));
+    const results = parseRollResultsInput(input.value);
 
     if(results.length !== request.dice.count){
-        area.innerHTML += `<br>Enter exactly ${request.dice.count} valid d20 result${request.dice.count > 1 ? "s" : ""}.`;
+        const expected = request.dice.count === 1
+            ? "exactly 1 d20 result"
+            : "exactly 2 d20 results (for example 15,7 or 15 7)";
+        area.innerHTML += `<br><strong>Input rejected:</strong> enter ${expected}.`;
         return;
     }
 
@@ -227,7 +290,7 @@ function submitAttackFromUI(rollId,targetAC,attackBonus,targetId){
     );
 
     if(!submitted.success){
-        area.innerHTML += `<br>Attack roll rejected: ${submitted.reason}`;
+        renderCombatError("Attack roll rejected",submitted.reason);
         return;
     }
 
@@ -268,7 +331,7 @@ function submitAttackFromUI(rollId,targetAC,attackBonus,targetId){
     );
 
     if(!damageRequest.success){
-        area.innerHTML = `Damage request rejected: ${damageRequest.reason}`;
+        renderCombatError("Damage request rejected",damageRequest.reason);
         return;
     }
 
@@ -276,7 +339,7 @@ function submitAttackFromUI(rollId,targetAC,attackBonus,targetId){
         <strong>HIT${submitted.result.critical ? " — CRITICAL" : ""}</strong><br><br>
         Attack total: ${submitted.result.attackTotal} vs AC ${targetAC}<br>
         Damage: ${damageRequest.request.dice.count}d${damageRequest.request.dice.sides} ${attack.damageBonus >= 0 ? "+" : ""}${attack.damageBonus} ${attack.damageType}<br><br>
-        <input id="damage-roll-results" type="text" placeholder="e.g. 6 or 6,3">
+        <input id="damage-roll-results" type="text" placeholder="${damageRequest.request.dice.count === 1 ? "e.g. 6" : "e.g. 6,3 or 6 3"}">
         <button onclick="submitDamageFromUI('${damageRequest.request.rollId}','${target.id}',${attack.damageBonus},'${attack.damageType}')">Submit Damage Roll</button>
     `;
 }
@@ -288,16 +351,17 @@ function submitDamageFromUI(rollId,targetId,damageBonus,damageType){
     const input = document.getElementById("damage-roll-results");
 
     if(!area || !request || !target || !input){
+        renderCombatError("Damage roll unavailable","The damage RollRequest is no longer pending. Return to the action panel and start a new attack.");
         return;
     }
 
-    const results = input.value
-        .split(",")
-        .map(value => Number(value.trim()))
-        .filter(value => Number.isInteger(value));
+    const results = parseRollResultsInput(input.value);
 
     if(results.length !== request.dice.count){
-        area.innerHTML += `<br>Enter exactly ${request.dice.count} valid damage die result${request.dice.count > 1 ? "s" : ""}.`;
+        const expected = request.dice.count === 1
+            ? "exactly 1 damage die result"
+            : `exactly ${request.dice.count} damage die results`;
+        area.innerHTML += `<br><strong>Input rejected:</strong> enter ${expected}.`;
         return;
     }
 
@@ -315,7 +379,7 @@ function submitDamageFromUI(rollId,targetId,damageBonus,damageType){
     );
 
     if(!submitted.success){
-        area.innerHTML += `<br>Damage roll rejected: ${submitted.reason}`;
+        renderCombatError("Damage roll rejected",submitted.reason);
         return;
     }
 
