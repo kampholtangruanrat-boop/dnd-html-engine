@@ -3,6 +3,7 @@ let gameState = {
     encounterEnemies: [],
     map: null,
     activeCharacter: null,
+    selectedTargetId: null,
     movementHistory: {},
     turn: {
         active:false,
@@ -34,6 +35,7 @@ async function loadGame(){
     gameState.map = await mapResponse.json();
 
     gameState.activeCharacter = gameState.party[0] || null;
+    gameState.selectedTargetId = null;
 
     renderParty();
     renderTurnOrder();
@@ -66,6 +68,10 @@ function setActiveCharacter(id){
         return;
     }
 
+    if(character.faction === "enemy" && gameState.turn.active){
+        return;
+    }
+
     if(gameState.turn.active){
         const currentCharacter = getCurrentTurnCharacter(
             gameState.turn,
@@ -79,6 +85,7 @@ function setActiveCharacter(id){
     }
 
     gameState.activeCharacter = character;
+    gameState.selectedTargetId = null;
     renderActiveCharacter();
     renderMap();
     renderCombatActions();
@@ -164,8 +171,12 @@ function renderMap(){
             );
 
             if(character){
+                const handler = character.faction === "enemy"
+                    ? `selectCombatTarget('${character.id}')`
+                    : `setActiveCharacter('${character.id}')`;
+
                 token = `
-                <button onclick="event.stopPropagation(); setActiveCharacter('${character.id}')">
+                <button onclick="event.stopPropagation(); ${handler}">
                 ${character.name[0]}
                 </button>
                 `;
@@ -262,15 +273,16 @@ function startCombat(){
         return;
     }
 
-    const result = initializeCombat(gameState.party);
+    const result = initializeCombat(getAllCombatants());
     if(!result.success){
         return;
     }
 
     gameState.turn = result.state;
+    gameState.selectedTargetId = null;
     gameState.activeCharacter = getCurrentTurnCharacter(
         gameState.turn,
-        gameState.party
+        getAllCombatants()
     );
 
     renderParty();
@@ -285,7 +297,7 @@ function endCurrentTurn(){
         return;
     }
 
-    const result = advanceTurn(gameState.turn,gameState.party);
+    const result = advanceTurn(gameState.turn,getAllCombatants());
     if(!result.success){
         return;
     }
@@ -295,9 +307,10 @@ function endCurrentTurn(){
     }
 
     gameState.turn = result.state;
+    gameState.selectedTargetId = null;
     gameState.activeCharacter = getCurrentTurnCharacter(
         gameState.turn,
-        gameState.party
+        getAllCombatants()
     );
 
     renderParty();
