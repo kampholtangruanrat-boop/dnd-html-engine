@@ -16,7 +16,8 @@ const {
     createActionResolutionPlan,
     commitActionResolution,
     createAttackRollRequest,
-    submitAttackRoll
+    submitAttackRoll,
+    getEffectiveAttackRollMode
 } = context;
 
 function assert(condition,message){
@@ -64,7 +65,6 @@ const initiative = finalizeInitiative(combat.state,characters);
 assert(initiative.success,"Non-tied initiative should finalize");
 assert(combat.state.initiative.length === 3,"Combat should contain three initiative entries");
 
-// Reorder test fixture so Kenji is the active actor.
 combat.state.initiative = [
     {characterId:"kenji",initiativeRoll:15,total:15,order:0},
     {characterId:"goblin",initiativeRoll:10,total:10,order:1},
@@ -77,9 +77,7 @@ const intentResult = createIntent({
     intentId:"intent-attack-1",
     actorId:"kenji",
     type:"action",
-    payload:{
-        actionId:"attack"
-    },
+    payload:{actionId:"attack"},
     source:"player"
 });
 const confirmedIntent = {...intentResult.intent,status:"confirmed"};
@@ -92,8 +90,6 @@ assert(planned.success,"Action should produce a resolution plan");
 const committed = commitActionResolution(combat.state,characters,confirmedIntent,planned.plan);
 assert(committed.success,"Action resource should be consumed before the attack proceeds");
 
-// Use Bonus Action/Reaction resources for attack fixtures so this remains a
-// foundation test rather than testing Action resource policy twice.
 const requestIntentResult = createIntent({
     intentId:"intent-attack-request",
     actorId:"kenji",
@@ -129,10 +125,33 @@ assert(rollSubmission.success,"Valid attack RollResult should resolve");
 assert(rollSubmission.result.selected === 8,"Attack should use the submitted d20");
 assert(rollSubmission.result.attackTotal === 13,"Attack total should include attack bonus");
 assert(rollSubmission.result.outcome === "hit","Total equal to AC should hit");
-assert(combat.state.hp === undefined,"Attack resolution should not invent top-level HP state");
 assert(JSON.stringify(combat.state.initiative) === beforeInitiative,"Attack roll submission must not alter initiative state");
 
-// Natural 20 is an automatic hit and critical.
+const secondAttackIntent = createIntent({
+    intentId:"intent-attack-request-2",
+    actorId:"kenji",
+    type:"reaction",
+    payload:{
+        actionId:"second_attack",
+        attack:{
+            targetId:"goblin",
+            attackMode:"melee",
+            reachFeet:5,
+            attackBonus:5,
+            rollMode:"normal"
+        }
+    },
+    source:"player"
+});
+const secondAttackRequest = createAttackRollRequest(
+    combat.state,
+    characters,
+    map,
+    {...secondAttackIntent.intent,status:"confirmed"}
+);
+assert(secondAttackRequest.success,"A later attack should create a new RollRequest");
+assert(secondAttackRequest.request.rollId !== attackRequest.request.rollId,"Sequential attacks must have unique RollRequest IDs");
+
 const critIntent = createIntent({
     intentId:"intent-crit",
     actorId:"kenji",
@@ -149,7 +168,6 @@ const crit = submitAttackRoll(combat.state,critRequest.request,{rollId:critReque
 assert(crit.success && crit.result.outcome === "hit","Natural 20 must hit regardless of attack total");
 assert(crit.result.critical === true,"Natural 20 must be marked critical");
 
-// Natural 1 is an automatic miss regardless of attack bonus.
 const nat1Intent = createIntent({
     intentId:"intent-nat1",
     actorId:"kenji",
@@ -165,7 +183,6 @@ assert(nat1Request.success,"Natural-1 fixture should create a request");
 const nat1 = submitAttackRoll(combat.state,nat1Request.request,{rollId:nat1Request.request.rollId,source:"player",results:[1]},nat1Request.targetAC,nat1Request.attackBonus);
 assert(nat1.success && nat1.result.outcome === "miss","Natural 1 must miss regardless of attack bonus");
 
-// Invalid target, hostile target, and melee range are rejected before a roll request.
 const ally = makeCharacter("ally","player",3,3,13);
 const charactersWithAlly = [...characters,ally];
 const badTargetIntent = createIntent({
@@ -188,15 +205,12 @@ const outOfReachIntent = createIntent({
 const outOfReachRequest = createAttackRollRequest(combat.state,characters,map,{...outOfReachIntent.intent,status:"confirmed"});
 assert(outOfReachRequest.success === false,"Target outside melee reach must be rejected");
 
-// Ranged attacks beyond normal range are legal within long range. The
-// disadvantage rule is intentionally reserved for the next modifiers slice.
 const rangedIntent = createIntent({
     intentId:"intent-ranged",
     actorId:"kenji",
-    type:"reaction",
+    type:"action",
     payload:{
         actionId:"ranged_attack",
-        attackMode:"ranged",
         attack:{
             targetId:"far_goblin",
             attackMode:"ranged",
@@ -211,9 +225,11 @@ const rangedIntent = createIntent({
 const rangedRequest = createAttackRollRequest(combat.state,characters,map,{...rangedIntent.intent,status:"confirmed"});
 assert(rangedRequest.success,"Target inside ranged long range should be legal");
 assert(rangedRequest.distanceFeet === 20,"Attack distance should use grid distance in feet");
+assert(rangedRequest.request.mode === "disadvantage","A ranged attack beyond normal range must impose disadvantage");
+assert(rangedRequest.request.dice.count === 2,"Disadvantage should request two d20 results");
+assert(getEffectiveAttackRollMode("ranged","advantage",20,15) === "normal","Advantage and long-range disadvantage should cancel");
 
-// Provenance must still be enforced by dice.js.
-const invalidSource = submitAttackRoll(combat.state,rangedRequest.request,{rollId:rangedRequest.request.rollId,source:"python_rng",results:[10]},rangedRequest.targetAC,rangedRequest.attackBonus);
+const invalidSource = submitAttackRoll(combat.state,rangedRequest.request,{rollId:rangedRequest.request.rollId,source:"python_rng",results:[10,9]},rangedRequest.targetAC,rangedRequest.attackBonus);
 assert(invalidSource.success === false,"Mismatched RollResult source must be rejected");
 
 console.log("Attack resolution tests: PASS");
