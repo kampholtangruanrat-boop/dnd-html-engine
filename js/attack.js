@@ -1,5 +1,4 @@
 function getAttackDistanceFeet(attacker,target,map){
-
     if(!attacker || !target || !attacker.position || !target.position){
         return null;
     }
@@ -15,9 +14,7 @@ function getAttackDistanceFeet(attacker,target,map){
     return Math.max(dx,dy) * feetPerSquare;
 }
 
-
 function getCharacterById(characters,characterId){
-
     if(!Array.isArray(characters) || typeof characterId !== "string"){
         return null;
     }
@@ -25,9 +22,7 @@ function getCharacterById(characters,characterId){
     return characters.find(character => character.id === characterId) || null;
 }
 
-
 function isHostileAttack(attacker,target){
-
     return Boolean(
         attacker &&
         target &&
@@ -37,9 +32,27 @@ function isHostileAttack(attacker,target){
     );
 }
 
+function getEffectiveAttackRollMode(attackMode,requestedMode,distanceFeet,normalRangeFeet){
+    if(attackMode !== "ranged" || distanceFeet === null){
+        return requestedMode;
+    }
+
+    const beyondNormal =
+        Number.isInteger(normalRangeFeet) &&
+        distanceFeet > normalRangeFeet;
+
+    if(!beyondNormal){
+        return requestedMode;
+    }
+
+    if(requestedMode === "advantage"){
+        return "normal";
+    }
+
+    return "disadvantage";
+}
 
 function validateAttackIntent(state,characters,map,intent){
-
     if(!state || !state.active || state.phase !== "turn"){
         return {valid:false,reason:"Attacks can only be resolved during an active turn"};
     }
@@ -63,7 +76,7 @@ function validateAttackIntent(state,characters,map,intent){
     }
 
     if(!intent.payload || typeof intent.payload !== "object" || Array.isArray(intent.payload)){
-        return {valid:false,reason:"Attack intent payload must be an object"};
+        return {valid:false,reason:"Attack intent payload is required"};
     }
 
     const attack = intent.payload.attack;
@@ -119,12 +132,23 @@ function validateAttackIntent(state,characters,map,intent){
         return {valid:false,reason:"Attack requires an integer attackBonus"};
     }
 
-    const mode =
+    const requestedMode =
         attack.rollMode === undefined ? "normal" : attack.rollMode;
 
-    if(mode !== "normal" && mode !== "advantage" && mode !== "disadvantage"){
+    if(requestedMode !== "normal" && requestedMode !== "advantage" && requestedMode !== "disadvantage"){
         return {valid:false,reason:"Attack rollMode is invalid"};
     }
+
+    const normalRangeFeet = Number.isInteger(attack.normalRangeFeet)
+        ? attack.normalRangeFeet
+        : null;
+
+    const rollMode = getEffectiveAttackRollMode(
+        attackMode,
+        requestedMode,
+        distanceFeet,
+        normalRangeFeet
+    );
 
     return {
         valid:true,
@@ -134,21 +158,20 @@ function validateAttackIntent(state,characters,map,intent){
         attackMode:attackMode,
         distanceFeet:distanceFeet,
         attackBonus:attack.attackBonus,
-        rollMode:mode
+        rollMode:rollMode,
+        requestedRollMode:requestedMode
     };
 }
 
-
 function createAttackRollRequest(state,characters,map,intent){
-
     const validation = validateAttackIntent(state,characters,map,intent);
 
     if(!validation.valid){
         return {success:false,request:null,reason:validation.reason};
     }
 
-    const rollId =
-        `attack-${state.combatId}-${state.eventSequence + 1}`;
+    const eventId = state.eventSequence + 1;
+    const rollId = `attack-${state.combatId}-${eventId}`;
 
     const created = createRollRequest({
         rollId:rollId,
@@ -164,6 +187,7 @@ function createAttackRollRequest(state,characters,map,intent){
         return {success:false,request:null,reason:created.reason};
     }
 
+    state.eventSequence = eventId;
     state.pendingRolls.push(created.request);
 
     return {
@@ -173,13 +197,12 @@ function createAttackRollRequest(state,characters,map,intent){
         targetAC:validation.target.ac,
         attackBonus:validation.attackBonus,
         attackMode:validation.attackMode,
-        distanceFeet:validation.distanceFeet
+        distanceFeet:validation.distanceFeet,
+        requestedRollMode:validation.requestedRollMode
     };
 }
 
-
 function resolveAttackRoll(request,rollResult,targetAC,attackBonus){
-
     if(!request || request.type !== "attack" || !rollResult){
         return {success:false,reason:"Invalid attack RollRequest or RollResult"};
     }
@@ -221,9 +244,7 @@ function resolveAttackRoll(request,rollResult,targetAC,attackBonus){
     };
 }
 
-
 function submitAttackRoll(state,request,rollResult,targetAC,attackBonus){
-
     if(!state || !request){
         return {success:false,state:state,reason:"Attack state and request are required"};
     }
@@ -251,9 +272,7 @@ function submitAttackRoll(state,request,rollResult,targetAC,attackBonus){
     };
 }
 
-
 function createDamageRollForAttack(state,attackRequest,attackResolution,damageSpec){
-
     if(!state || !attackRequest || !attackResolution || !damageSpec){
         return {success:false,request:null,reason:"Attack damage integration requires state, attack resolution, and damage specification"};
     }
@@ -287,8 +306,8 @@ function createDamageRollForAttack(state,attackRequest,attackResolution,damageSp
         return {success:false,request:null,reason:"Damage requires a damage type"};
     }
 
-    const rollId =
-        `damage-${state.combatId}-${state.eventSequence + state.pendingRolls.length + 1}`;
+    const eventId = state.eventSequence + 1;
+    const rollId = `damage-${state.combatId}-${eventId}`;
 
     const created = createDamageRollRequest({
         rollId:rollId,
@@ -303,6 +322,7 @@ function createDamageRollForAttack(state,attackRequest,attackResolution,damageSp
         return {success:false,request:null,reason:created.reason};
     }
 
+    state.eventSequence = eventId;
     state.pendingRolls.push(created.request);
 
     return {
@@ -314,9 +334,7 @@ function createDamageRollForAttack(state,attackRequest,attackResolution,damageSp
     };
 }
 
-
 function submitDamageRollForAttack(state,damageRequest,rollResult,target,damageBonus,damageType){
-
     if(!state || !damageRequest || !target){
         return {success:false,state:state,reason:"Damage submission requires state, request, and target"};
     }
