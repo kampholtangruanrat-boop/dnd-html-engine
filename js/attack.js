@@ -388,14 +388,4 @@ function submitDamageRollForAttack(state,damageRequest,rollResult,target,damageB
         commit:committed,
         allRollsResolved:submission.allRollsResolved
     };
-};
-    }
-
-    return {
-        success:true,
-        state:state,
-        damage:resolved,
-        commit:committed,
-        allRollsResolved:submission.allRollsResolved
-    };
 }
