@@ -122,7 +122,7 @@ function resolveDamageRoll(request,rollResult,damageBonus,target,damageType){
 }
 
 
-function commitDamage(target,resolvedDamage){
+function commitDamage(target,resolvedDamage,options = {}){
     if(!target || !resolvedDamage || !resolvedDamage.success){
         return {success:false,reason:"Target and resolved damage are required"};
     }
@@ -131,13 +131,84 @@ function commitDamage(target,resolvedDamage){
         return {success:false,reason:"Target must have valid HP values"};
     }
 
+    if(typeof ensureCreatureState !== "function"){
+        return {success:false,reason:"Creature condition state engine is required"};
+    }
+
+    ensureCreatureState(target);
+
+    const attackMode = options.attackMode || null;
+    const knockOutRequested = options.knockOut === true;
+
+    if(knockOutRequested && attackMode !== "melee"){
+        return {success:false,reason:"Knock Out is only available for a melee attack"};
+    }
+
     const previousHP = target.hp;
-    target.hp = Math.max(0,target.hp - resolvedDamage.finalDamage);
+    const finalDamage = resolvedDamage.finalDamage;
+    const reachesZero = previousHP > 0 && finalDamage >= previousHP;
+
+    if(knockOutRequested && !reachesZero){
+        return {success:false,reason:"Knock Out is only available when the damage would reduce the target to 0 HP"};
+    }
+
+    if(knockOutRequested && previousHP <= 0){
+        return {success:false,reason:"Knock Out is not available for a target already at 0 HP"};
+    }
+
+    if(knockOutRequested){
+        target.hp = 1;
+        const state = setUnconscious(target,{stable:false});
+
+        return {
+            success:state.success,
+            previousHP:previousHP,
+            damage:finalDamage,
+            currentHP:target.hp,
+            lifeState:target.lifeState,
+            stable:target.stable,
+            conditions:[...target.conditions],
+            knockedOut:true
+        };
+    }
+
+    target.hp = Math.max(0,target.hp - finalDamage);
+
+    let stateResult = null;
+
+    if(target.hp === 0){
+        const control = target.control || (target.faction === "player" ? "player" : "enemy");
+
+        if(control === "player"){
+            const remainingDamage = Math.max(0,finalDamage - previousHP);
+
+            if(remainingDamage >= target.max_hp){
+                stateResult = setDead(target);
+            }else{
+                stateResult = setUnconscious(target,{stable:false});
+            }
+        }else{
+            stateResult = setDead(target);
+        }
+    }else if(target.lifeState === "unconscious"){
+        stateResult = restoreFromZeroHP(target);
+    }else{
+        target.lifeState = "alive";
+        target.stable = false;
+    }
+
+    if(stateResult && !stateResult.success){
+        return {success:false,reason:stateResult.reason};
+    }
 
     return {
         success:true,
         previousHP:previousHP,
-        damage:resolvedDamage.finalDamage,
-        currentHP:target.hp
+        damage:finalDamage,
+        currentHP:target.hp,
+        lifeState:target.lifeState,
+        stable:target.stable,
+        conditions:[...target.conditions],
+        knockedOut:false
     };
 }
