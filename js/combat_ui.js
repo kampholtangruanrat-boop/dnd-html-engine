@@ -339,12 +339,13 @@ function submitAttackFromUI(rollId,targetAC,attackBonus,targetId){
         <strong>HIT${submitted.result.critical ? " — CRITICAL" : ""}</strong><br><br>
         Attack total: ${submitted.result.attackTotal} vs AC ${targetAC}<br>
         Damage: ${damageRequest.request.dice.count}d${damageRequest.request.dice.sides} ${attack.damageBonus >= 0 ? "+" : ""}${attack.damageBonus} ${attack.damageType}<br><br>
-        <input id="damage-roll-results" type="text" placeholder="${damageRequest.request.dice.count === 1 ? "e.g. 6" : "e.g. 6,3 or 6 3"}">
-        <button onclick="submitDamageFromUI('${damageRequest.request.rollId}','${target.id}',${attack.damageBonus},'${attack.damageType}')">Submit Damage Roll</button>
+        <input id="damage-roll-results" type="text" placeholder="${damageRequest.request.dice.count === 1 ? "e.g. 6" : "e.g. 6,3 or 6 3"}"><br><br>
+        ${attack.attackMode === "melee" ? '<label><input id="damage-knockout" type="checkbox"> Knock Out if this damage would reduce the target to 0 HP</label><br><br>' : ''}
+        <button onclick="submitDamageFromUI('${damageRequest.request.rollId}','${target.id}',${attack.damageBonus},'${attack.damageType}','${attack.attackMode}')">Submit Damage Roll</button>
     `;
 }
 
-function submitDamageFromUI(rollId,targetId,damageBonus,damageType){
+function submitDamageFromUI(rollId,targetId,damageBonus,damageType,attackMode){
     const area = document.getElementById("combat-actions");
     const request = getPendingRoll(gameState.turn,rollId);
     const target = getAllCombatants().find(character => character.id === targetId);
@@ -365,6 +366,9 @@ function submitDamageFromUI(rollId,targetId,damageBonus,damageType){
         return;
     }
 
+    const knockoutInput = document.getElementById("damage-knockout");
+    const knockOut = Boolean(knockoutInput && knockoutInput.checked);
+
     const submitted = submitDamageRollForAttack(
         gameState.turn,
         request,
@@ -375,7 +379,11 @@ function submitDamageFromUI(rollId,targetId,damageBonus,damageType){
         },
         target,
         damageBonus,
-        damageType
+        damageType,
+        {
+            attackMode:attackMode,
+            knockOut:knockOut
+        }
     );
 
     if(!submitted.success){
@@ -388,10 +396,12 @@ function submitDamageFromUI(rollId,targetId,damageBonus,damageType){
     renderMap();
 
     area.innerHTML = `
-        <strong>Damage Applied</strong><br><br>
+        <strong>${submitted.commit && submitted.commit.knockedOut ? "Target Knocked Out" : submitted.commit && submitted.commit.lifeState === "dead" ? "Target Defeated" : "Damage Applied"}</strong><br><br>
         ${submitted.damage.rawDamage} ${damageType} raw damage<br>
         ${submitted.damage.mitigation}: ${submitted.damage.finalDamage} damage<br>
-        ${target.name}: ${submitted.commit.previousHP} → ${submitted.commit.currentHP} HP<br><br>
+        ${target.name}: ${submitted.commit.previousHP} → ${submitted.commit.currentHP} HP<br>
+        Status: ${submitted.commit.lifeState}${submitted.commit.stable ? " / Stable" : ""}<br>
+        Conditions: ${submitted.commit.conditions.length ? submitted.commit.conditions.join(", ") : "None"}<br><br>
         <button onclick="renderCombatActions()">Continue</button>
         <button onclick="endCurrentTurn()">End Turn</button>
     `;
