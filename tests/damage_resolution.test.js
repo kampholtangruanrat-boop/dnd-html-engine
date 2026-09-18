@@ -126,4 +126,69 @@ function makeRequest(overrides = {}){
     assert.strictEqual(invalid.success,false);
 }
 
+
+{
+    const request = makeRequest();
+    const target = {hp:3,max_hp:7,control:"enemy",conditions:[]};
+    const result = context.resolveDamageRoll(
+        request,
+        {rollId:request.rollId,source:"player",results:[6]},
+        2,
+        target,
+        "slashing"
+    );
+    const committed = context.commitDamage(target,result);
+    assert.strictEqual(committed.success,true);
+    assert.strictEqual(target.hp,0);
+    assert.strictEqual(target.lifeState,"dead");
+}
+
+{
+    const request = makeRequest();
+    const target = {hp:5,max_hp:14,control:"player",conditions:[]};
+    const result = context.resolveDamageRoll(
+        request,
+        {rollId:request.rollId,source:"player",results:[6]},
+        2,
+        target,
+        "slashing"
+    );
+    const committed = context.commitDamage(target,result);
+    assert.strictEqual(committed.lifeState,"unconscious");
+    assert.strictEqual(target.hp,0);
+    assert(target.conditions.includes("unconscious"));
+}
+
+{
+    const request = makeRequest();
+    const target = {hp:3,max_hp:7,control:"enemy",conditions:[]};
+    const result = context.resolveDamageRoll(
+        request,
+        {rollId:request.rollId,source:"player",results:[6]},
+        2,
+        target,
+        "slashing"
+    );
+    const committed = context.commitDamage(target,result,{knockOut:true,attackMode:"melee"});
+    assert.strictEqual(committed.success,true);
+    assert.strictEqual(committed.lifeState,"unconscious");
+    assert.strictEqual(target.hp,1);
+    assert.strictEqual(committed.knockedOut,true);
+}
+
+{
+    const request = makeRequest();
+    const target = {hp:3,max_hp:7,control:"enemy",conditions:[]};
+    const result = context.resolveDamageRoll(
+        request,
+        {rollId:request.rollId,source:"player",results:[6]},
+        2,
+        target,
+        "slashing"
+    );
+    const rejected = context.commitDamage(target,result,{knockOut:true,attackMode:"ranged"});
+    assert.strictEqual(rejected.success,false);
+}
+
+
 console.log("Damage resolution tests passed");
