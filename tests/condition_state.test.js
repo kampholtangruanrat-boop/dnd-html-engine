@@ -40,7 +40,8 @@ vm.runInContext(fs.readFileSync("js/condition.js","utf8"),context);
     const restored = context.restoreFromZeroHP(creature);
     assert.strictEqual(restored.success,true);
     assert.strictEqual(creature.lifeState,"alive");
-    assert.strictEqual(creature.conditions.length,0);
+    assert.strictEqual(creature.conditions.includes("prone"),true);
+    assert.strictEqual(creature.conditions.includes("unconscious"),false);
     assert.strictEqual(creature.stable,false);
 }
 
