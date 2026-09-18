@@ -83,8 +83,11 @@ function removeCondition(creature,condition){
     creature.conditions = creature.conditions.filter(item => item !== normalized);
 
     if(normalized === "unconscious"){
+        // The 2024 rules explicitly state that when Unconscious ends,
+        // the creature remains Prone. Incapacitated is an implied effect
+        // of Unconscious and therefore ends with it.
         creature.conditions = creature.conditions.filter(item =>
-            item !== "incapacitated" && item !== "prone"
+            item !== "incapacitated"
         );
 
         if(creature.lifeState === "unconscious"){
@@ -107,7 +110,7 @@ function setDead(creature){
     creature.lifeState = "dead";
     creature.stable = false;
     creature.conditions = creature.conditions.filter(item =>
-        item !== "unconscious" && item !== "incapacitated" && item !== "prone"
+        item !== "unconscious" && item !== "incapacitated"
     );
 
     return {success:true,lifeState:"dead",conditions:[...creature.conditions]};
