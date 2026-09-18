@@ -6,6 +6,7 @@ const context = {};
 vm.createContext(context);
 
 vm.runInContext(fs.readFileSync("js/dice.js", "utf8"), context);
+vm.runInContext(fs.readFileSync("js/condition.js", "utf8"), context);
 vm.runInContext(fs.readFileSync("js/damage.js", "utf8"), context);
 
 function makeRequest(overrides = {}){
