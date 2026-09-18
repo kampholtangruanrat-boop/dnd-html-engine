@@ -55,6 +55,8 @@ function renderParty(){
         Class: ${character.class}<br>
         HP: ${character.hp}/${character.max_hp}<br>
         AC: ${character.ac}<br>
+        Status: ${getCreatureStatus(character).lifeState}${character.stable ? " / Stable" : ""}<br>
+        Conditions: ${character.conditions && character.conditions.length ? character.conditions.join(", ") : "None"}<br>
         <button onclick="setActiveCharacter('${character.id}')">Select</button>
         </div>
         <hr>
@@ -146,6 +148,8 @@ function renderActiveCharacter(){
     Class: ${c.class}<br>
     HP: ${c.hp}/${c.max_hp}<br>
     AC: ${c.ac}<br>
+    Status: ${getCreatureStatus(c).lifeState}${c.stable ? " / Stable" : ""}<br>
+    Conditions: ${c.conditions && c.conditions.length ? c.conditions.join(", ") : "None"}<br>
     Movement: ${c.movement.remaining}/${c.movement.types.walk}
     <br>
     Action: ${resources.actionUsed ? "Used" : "Available"}
@@ -175,9 +179,15 @@ function renderMap(){
                     ? `selectCombatTarget('${character.id}')`
                     : `setActiveCharacter('${character.id}')`;
 
+                const statusLabel = character.lifeState === "dead"
+                    ? "†"
+                    : character.lifeState === "unconscious"
+                        ? "U"
+                        : character.name[0];
+
                 token = `
                 <button onclick="event.stopPropagation(); ${handler}">
-                ${character.name[0]}
+                ${statusLabel}
                 </button>
                 `;
             }
