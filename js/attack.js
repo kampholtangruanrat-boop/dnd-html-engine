@@ -330,11 +330,12 @@ function createDamageRollForAttack(state,attackRequest,attackResolution,damageSp
         request:created.request,
         targetId:damageSpec.targetId,
         damageBonus:damageSpec.damageBonus,
-        damageType:damageSpec.damageType
+        damageType:damageSpec.damageType,
+        attackMode:attackRequest.attackMode
     };
 }
 
-function submitDamageRollForAttack(state,damageRequest,rollResult,target,damageBonus,damageType){
+function submitDamageRollForAttack(state,damageRequest,rollResult,target,damageBonus,damageType,options = {}){
     if(!state || !damageRequest || !target){
         return {success:false,state:state,reason:"Damage submission requires state, request, and target"};
     }
@@ -365,9 +366,29 @@ function submitDamageRollForAttack(state,damageRequest,rollResult,target,damageB
         return {success:false,state:state,reason:submission.reason};
     }
 
-    const committed = commitDamage(target,resolved);
+    if(options.deferCommit === true){
+        return {
+            success:true,
+            state:state,
+            damage:resolved,
+            commit:null,
+            allRollsResolved:submission.allRollsResolved
+        };
+    }
+
+    const committed = commitDamage(target,resolved,options);
     if(!committed.success){
         return {success:false,state:state,reason:committed.reason};
+    }
+
+    return {
+        success:true,
+        state:state,
+        damage:resolved,
+        commit:committed,
+        allRollsResolved:submission.allRollsResolved
+    };
+};
     }
 
     return {
